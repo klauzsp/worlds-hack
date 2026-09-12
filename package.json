@@ -1,0 +1,14 @@
+{
+  "name": "worlds",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Horror game: VEED psychologist intake -> Reactor world generation",
+  "scripts": {
+    "start": "node --env-file=.env server.js"
+  },
+  "dependencies": {
+    "@fal-ai/client": "^1.7.0",
+    "express": "^4.21.2"
+  }
+}
