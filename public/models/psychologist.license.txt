@@ -1,0 +1,1 @@
+MPFB avatar by met4citizen, created with Blender and MPFB. License: CC0 1.0. Source: https://github.com/met4citizen/TalkingHead/tree/eed58d198076a7e1e825f804802921c4d3804d46 . Original file: avatars/mpfb.glb. Licensing statement: repository README, Licenses section. No changes to the original GLB.

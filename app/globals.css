@@ -93,16 +93,6 @@ body {
   filter: contrast(1.15) saturate(0.85) brightness(0.92);
 }
 
-/* The consulting room rendered in grade and shadow rather than an image. */
-.office-light {
-  background: radial-gradient(
-    ellipse 90% 70% at 50% 42%,
-    rgba(217, 199, 167, 0.14) 0%,
-    rgba(58, 42, 30, 0.35) 45%,
-    rgba(10, 9, 8, 0.97) 100%
-  );
-}
-
 /* Escalation vignette — the dark breathes in, roughly heartbeat rate. */
 @keyframes pulse-vignette {
   0%,
@@ -203,34 +193,6 @@ body {
   animation: world-crawl 60s linear forwards;
 }
 
-/* Office image drift — barely perceptible, stops the brain registering a still. */
-@keyframes office-drift {
-  0%,
-  100% {
-    transform: scale(1.04) translate(0, 0);
-  }
-  50% {
-    transform: scale(1.07) translate(1.5%, -1%);
-  }
-}
-.office-drift {
-  animation: office-drift 60s ease-in-out infinite;
-}
-
-/* Portrait breathing — the psychologist alive inside the still. */
-@keyframes breathe {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.012);
-  }
-}
-.breathe {
-  animation: breathe 6s ease-in-out infinite;
-}
-
 /* Subtitle entrance: 400ms fade with a 6px rise. */
 @keyframes subtitle-in {
   from {
@@ -256,6 +218,29 @@ body {
 }
 .subtitle-text {
   text-shadow: 0 1px 12px rgba(10, 9, 8, 0.9);
+}
+
+/* The answer composer floats in the lower third — a local scrim only, so
+   the room stays visible while the player types. */
+.answer-composer {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 20dvh;
+  display: flex;
+  justify-content: center;
+  padding-inline: 2rem;
+}
+.answer-composer::before {
+  content: "";
+  position: absolute;
+  top: -3rem;
+  bottom: -2rem;
+  left: 50%;
+  right: auto;
+  width: min(48rem, 100%);
+  transform: translateX(-50%);
+  z-index: -1;
+  background: radial-gradient(ellipse at center, rgba(10, 9, 8, 0.72), transparent 70%);
 }
 
 /* Answer overlay: scrim fade, input rises 12px. */
@@ -305,22 +290,9 @@ body {
 .fade-black {
   transition: opacity 1500ms cubic-bezier(0.4, 0, 0.2, 1);
 }
-
-/* The door: two panels parting on a sliver of darkness beyond. */
-@keyframes door-open {
-  from {
-    transform: scaleX(1);
-  }
-  to {
-    transform: scaleX(0);
-  }
-}
-.door-panel {
-  transition: transform 1500ms cubic-bezier(0.4, 0, 0.2, 1);
-  transform-origin: center;
-}
-.door-panel-face {
-  background: #120d09;
+/* The door fade must land fully black exactly as the camera crosses. */
+.door-fade {
+  transition-duration: 900ms;
 }
 
 /* Notebook typing caret. */
@@ -357,8 +329,6 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .office-drift,
-  .breathe,
   .subtitle-in,
   .input-rise {
     animation: none;

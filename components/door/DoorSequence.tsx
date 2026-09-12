@@ -1,120 +1,135 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Subtitle } from "@/components/interview/Subtitle";
 import { LINES } from "@/content/questions";
 import { mixer } from "@/lib/audio/mixer";
 import { PROMPT_RULES } from "@/lib/world/prompt-rules";
+import { DOOR_APPROACH_MS, DOOR_OPEN_MS, DOOR_PAN_MS } from "@/components/office/shots";
 
-type DoorPhase = "lines" | "approach" | "opening" | "black";
+export type DoorPhase = "lines" | "turn" | "approach" | "opening" | "black";
 
 /*
- * The stretchable cover for the world build. Plays her closing lines, waits
- * for the approach click, parts the door, and holds on black with the
- * sub-bass rising until the world reports ready. Never shows an indicator.
+ * The stretchable cover for the world build — the room itself performs it.
+ * Her two lines play in sequence, the seated camera turns to the door,
+ * glides to it, and the leaf swings away as the camera passes through.
+ * Opening requires: approach reached, the full approach glide elapsed, the
+ * world built, and the player having asked — a click at any earlier phase
+ * is remembered rather than discarded.
  */
 export function DoorSequence({
   worldReady,
   speak,
+  onPhase,
+  onError,
   onWorldEnter,
   onTimeout,
 }: {
   worldReady: boolean;
-  speak: (url: string) => Promise<void>;
+  speak: (url: string, signal?: AbortSignal) => Promise<void>;
+  onPhase: (phase: DoorPhase) => void;
+  onError: (error: unknown) => void;
   onWorldEnter: () => void;
   onTimeout: () => void;
 }) {
   const [phase, setPhase] = useState<DoorPhase>("lines");
   const [line, setLine] = useState<string>(LINES.understand);
-  const openedAt = useRef<number | null>(null);
-  const timedOut = useRef(false);
+  const [requested, setRequested] = useState(false);
+  const approachAt = useRef<number | null>(null);
+  const timers = useRef<number[]>([]);
+  const entered = useRef(false);
 
-  // Her two spoken lines, then the approach beat.
-  useEffect(() => {
-    const first = window.setTimeout(() => {
-      setLine(LINES.direction);
-      void speak("/audio/psychologist/direction.mp3");
-    }, 2200);
-    const second = window.setTimeout(() => setPhase("approach"), 4800);
-    void speak("/audio/psychologist/understand.mp3");
-    return () => {
-      window.clearTimeout(first);
-      window.clearTimeout(second);
-    };
-  }, [speak]);
+  const later = useCallback((ms: number, fn: () => void) => {
+    timers.current.push(window.setTimeout(fn, ms));
+  }, []);
 
-  // Absolute cap: never hold on black forever.
+  // Her two lines in sequence, then the turn and the walk to the door.
   useEffect(() => {
-    const cap = window.setTimeout(() => {
-      if (!timedOut.current) {
-        timedOut.current = true;
-        onTimeout();
+    const local = new AbortController();
+    let cancelled = false;
+    void (async () => {
+      try {
+        await speak("/audio/psychologist/understand.mp3", local.signal);
+        if (cancelled) return;
+        setLine(LINES.direction);
+        await speak("/audio/psychologist/direction.mp3", local.signal);
+      } catch (error) {
+        if (!cancelled) onError(error);
+        return;
       }
-    }, PROMPT_RULES.doorTimeoutMs);
+      if (cancelled) return;
+      setPhase("turn");
+      later(DOOR_PAN_MS, () => {
+        if (cancelled) return;
+        approachAt.current = performance.now();
+        setPhase("approach");
+      });
+    })();
+    return () => {
+      cancelled = true;
+      local.abort();
+    };
+  }, [speak, onError, later]);
+
+  // The 3D door and camera rig are driven by this phase.
+  useEffect(() => onPhase(phase), [phase, onPhase]);
+
+  // Opening waits for approach elapsed + world ready + the player's request.
+  useEffect(() => {
+    if (phase !== "approach" || !requested || !worldReady) return;
+    const remaining = DOOR_APPROACH_MS - (performance.now() - (approachAt.current ?? 0));
+    const t = window.setTimeout(() => {
+      // Office ambience fades out; the sub-bass rises through the opening.
+      mixer.stopLoop("office-tone", 1.5);
+      mixer.stopLoop("clock", 1.5);
+      mixer.playLoop("door-sub", "/audio/door-sub.mp3", 0.8, 3);
+      setPhase("opening");
+      // the fade lands only in the last stretch of the walk through
+      const fadeT = window.setTimeout(() => setPhase("black"), DOOR_OPEN_MS - 900);
+      const enterT = window.setTimeout(() => {
+        if (entered.current) return;
+        entered.current = true;
+        onWorldEnter();
+      }, DOOR_OPEN_MS);
+      timers.current.push(fadeT, enterT);
+    }, Math.max(0, remaining));
+    timers.current.push(t);
+    return () => window.clearTimeout(t);
+  }, [phase, requested, worldReady, onWorldEnter]);
+
+  // Absolute cap: never hold at the door forever.
+  useEffect(() => {
+    const cap = window.setTimeout(() => onTimeout(), PROMPT_RULES.doorTimeoutMs);
+    timers.current.push(cap);
     return () => window.clearTimeout(cap);
   }, [onTimeout]);
 
-  // When the world is ready, finish the fade to black then hand over.
-  useEffect(() => {
-    if (phase === "opening" && worldReady && openedAt.current !== null) {
-      const elapsed = Date.now() - openedAt.current;
-      const remaining = Math.max(0, 1500 - elapsed);
-      const t = window.setTimeout(onWorldEnter, remaining);
-      return () => window.clearTimeout(t);
-    }
-  }, [phase, worldReady, onWorldEnter]);
-
-  function approach() {
-    // A click while her line is still playing skips it forward — never
-    // ignore input; the door only opens from the approach beat.
-    if (phase === "lines") {
-      setPhase("approach");
-      return;
-    }
-    if (phase !== "approach") return;
-    openedAt.current = Date.now();
-    // Office ambience fades out; the sub-bass fades in and stays through black.
-    mixer.stopLoop("office-tone", 1.5);
-    mixer.stopLoop("clock", 1.5);
-    mixer.playLoop("door-sub", "/audio/door-sub.mp3", 0.8, 3);
-    setPhase("opening");
-  }
+  // All tracked timers die with the sequence.
+  useEffect(
+    () => () => {
+      for (const id of timers.current) window.clearTimeout(id);
+      timers.current = [];
+    },
+    [],
+  );
 
   return (
-    <div
-      className="absolute inset-0 z-20 bg-bg"
-      onClick={approach}
-      role={phase === "approach" ? "button" : undefined}
-      aria-label={phase === "approach" ? "Approach the door" : undefined}
+    <button
+      type="button"
+      className="absolute inset-0 z-20 cursor-pointer outline-none"
+      onClick={() => setRequested(true)}
+      aria-label="Approach the door"
     >
-      {/* The door: a vertical seam of darkness that parts on approach. */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="relative h-[62dvh] w-[24dvh] overflow-hidden">
-          <div className="absolute inset-0 bg-walnut/20" />
-          <div
-            className={`door-panel door-panel-face absolute inset-y-0 left-0 w-1/2 ${
-              phase !== "lines" && phase !== "approach" ? "-translate-x-full" : ""
-            }`}
-            style={{ transitionProperty: "transform" }}
-          />
-          <div
-            className={`door-panel door-panel-face absolute inset-y-0 right-0 w-1/2 ${
-              phase !== "lines" && phase !== "approach" ? "translate-x-full" : ""
-            }`}
-            style={{ transitionProperty: "transform" }}
-          />
-        </div>
-      </div>
+      {(phase === "lines" || phase === "turn" || phase === "approach") && (
+        <Subtitle text={line} />
+      )}
 
-      {phase === "approach" && <Subtitle text={line} />}
-      {phase === "lines" && <Subtitle text={line} />}
-
-      {/* Fade to black once the door opens. */}
+      {/* Fade to black only as the camera passes the threshold. */}
       <div
-        className={`fade-black pointer-events-none absolute inset-0 bg-black ${
-          phase === "opening" || phase === "black" ? "opacity-100" : "opacity-0"
+        className={`fade-black door-fade pointer-events-none absolute inset-0 bg-black ${
+          phase === "black" ? "opacity-100" : "opacity-0"
         }`}
       />
-    </div>
+    </button>
   );
 }

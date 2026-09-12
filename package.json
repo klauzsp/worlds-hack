@@ -11,11 +11,14 @@
     "generate:assets": "node scripts/generate-assets.mjs"
   },
   "dependencies": {
+    "@react-three/drei": "10.7.8",
+    "@react-three/fiber": "9.7.0",
     "@reactor-models/happy-oyster": "^1.0.0",
     "next": "15.5.25",
     "openai": "^7.15.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "three": "0.185.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -23,10 +26,16 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "0.185",
     "eslint": "^9",
     "eslint-config-next": "15.5.25",
     "tailwindcss": "^4",
     "typescript": "^5"
   },
-  "packageManager": "pnpm@9.15.9"
+  "packageManager": "pnpm@9.15.9",
+  "pnpm": {
+    "overrides": {
+      "@types/three": "0.185.4"
+    }
+  }
 }

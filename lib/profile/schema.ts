@@ -7,9 +7,9 @@ export const fearProfileSchema = z.object({
   timeOfDay: z.string().min(1),
   weather: z.string().min(1),
   seedImagePrompt: z.string().min(1),
-  worldPrompt: z.string().min(1).max(1900),
-  escalationPrompt: z.string().min(1).max(1900),
-  audioPrompt: z.string().min(1),
+  worldPrompt: z.string().min(1).max(1400),
+  escalationPrompt: z.string().min(1).max(350),
+  audioPrompt: z.string().min(1).max(200),
   notebookLines: z.tuple([z.string().min(1), z.string().min(1), z.string().min(1)]),
 });
 

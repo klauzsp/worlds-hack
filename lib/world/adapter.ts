@@ -70,6 +70,9 @@ export class WorldAdapter {
      Blob upload path resolves to a session-internal URL upstream cannot
      fetch (action_error 400001). */
   async buildWorld(prompt: string, firstFrameImageUrl: string): Promise<void> {
+    if (prompt.length > 2000) {
+      throw new Error(`World prompt exceeds the model's 2000-character limit (${prompt.length})`);
+    }
     await this.model.createWorld({
       prompt,
       firstFrameImageUrl,
