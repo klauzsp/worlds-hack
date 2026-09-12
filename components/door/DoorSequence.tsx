@@ -11,9 +11,9 @@ import { PROMPT_RULES } from "@/lib/world/prompt-rules";
 type DoorPhase = "lines" | "approach" | "opening" | "black";
 
 /*
- * The stretchable cover for the world build. Plays her closing lines, waits
- * for the approach click, parts the door, and holds on black with the
- * sub-bass rising until the world reports ready. Never shows an indicator.
+ * The stretchable cover for the world build. Plays her closing lines, shows
+ * the Open door button, and holds on black with the sub-bass rising until
+ * the world reports ready. Never shows an indicator.
  */
 export function DoorSequence({
   worldReady,
@@ -91,14 +91,7 @@ export function DoorSequence({
     }
   }, [phase, worldReady, onWorldEnter]);
 
-  function approach() {
-    // A click while her line is still playing skips it forward — never
-    // ignore input; the door only opens from the approach beat.
-    if (phase === "lines" && VIDEO_INTERVIEW) return;
-    if (phase === "lines") {
-      setPhase("approach");
-      return;
-    }
+  function openDoor() {
     if (phase !== "approach") return;
     openedAt.current = Date.now();
     // Office ambience fades out; the sub-bass fades in and stays through black.
@@ -111,31 +104,20 @@ export function DoorSequence({
   return (
     <div
       className={`absolute inset-0 z-20 ${VIDEO_INTERVIEW && (phase === "lines" || phase === "approach") ? "" : "bg-bg"}`}
-      onClick={approach}
-      role={phase === "approach" ? "button" : undefined}
-      aria-label={phase === "approach" ? "Approach the door" : undefined}
     >
-      {/* The door: a vertical seam of darkness that parts on approach. */}
-      <div className={`absolute inset-0 flex items-center justify-center ${VIDEO_INTERVIEW && phase === "lines" ? "invisible" : ""}`}>
-        <div className="relative h-[62dvh] w-[24dvh] overflow-hidden">
-          <div className="absolute inset-0 bg-walnut/20" />
-          <div
-            className={`door-panel absolute inset-y-0 left-0 w-1/2 bg-[#120d09] ${
-              phase !== "lines" && phase !== "approach" ? "-translate-x-full" : ""
-            }`}
-            style={{ transitionProperty: "transform" }}
-          />
-          <div
-            className={`door-panel absolute inset-y-0 right-0 w-1/2 bg-[#120d09] ${
-              phase !== "lines" && phase !== "approach" ? "translate-x-full" : ""
-            }`}
-            style={{ transitionProperty: "transform" }}
-          />
+      {phase === "approach" && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <button
+            type="button"
+            onClick={openDoor}
+            className="cursor-pointer border border-text-muted/40 px-10 py-3 font-serif text-lg text-text transition-colors hover:border-text hover:bg-text/5"
+          >
+            Open door
+          </button>
         </div>
-      </div>
+      )}
 
-      {phase === "approach" && <Subtitle text={line} />}
-      {phase === "lines" && <Subtitle text={line} />}
+      {(phase === "lines" || phase === "approach") && <Subtitle text={line} />}
 
       {/* Fade to black once the door opens. */}
       <div
