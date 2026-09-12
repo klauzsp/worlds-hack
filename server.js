@@ -1,3 +1,5 @@
+import { interpretBrief } from "./director.js";
+import { mintReactorToken } from "./reactor-auth.js";
 import express from "express";
 import { fal } from "@fal-ai/client";
 import fs from "node:fs/promises";
@@ -215,7 +217,20 @@ async function runPipeline() {
 
 const app = express();
 app.use(express.json());
-app.use(express.static("public"));
+app.use(express.static("public", { setHeaders(res, file) { if (/\.(js|html)$/.test(file)) res.set("Cache-Control", "no-store"); } }));
+
+app.post("/api/reactor/token", async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  const origin = req.get("origin");
+  if (origin && origin !== `${req.protocol}://${req.get("host")}`) {
+    return res.status(403).json({ error: "Use this app to start a session." });
+  }
+  try {
+    res.json(await mintReactorToken(process.env.REACTOR_API_KEY));
+  } catch (err) {
+    res.status(502).json({ error: err.name === "TimeoutError" ? "Reactor timed out. Please retry." : err.message });
+  }
+});
 
 // Shared video assets; answers remain private to the browser and each request.
 app.post("/api/session", (req, res) => {
@@ -223,7 +238,7 @@ app.post("/api/session", (req, res) => {
   res.json(publicState());
 });
 app.get("/api/session", (req, res) => res.json(publicState()));
-app.post("/api/brief", (req, res) => {
+app.post("/api/brief", async (req, res) => {
   const { answers, intensity = "slow dread", exclusions = "" } = req.body ?? {};
   if (!Array.isArray(answers) || answers.length !== SCRIPT.length ||
       answers.some(a => typeof a !== "string" || !a.trim() || a.length > 1000) ||
@@ -235,13 +250,17 @@ app.post("/api/brief", (req, res) => {
   const brief = {
     title: "The Consultation", version: 1,
     player: name, fear, imagery: darkness, intensity, exclusions,
-    opening: "The psychologist closes your file. The office door opens onto somewhere it cannot possibly lead.",
-    objective: "Find three missing pages from your file and return to the doctor's office.",
-    prompt: `First-person psychological horror game. Begin in a decaying psychologist's office, a single amber desk lamp, rain on the windows. The door leads into a continuous explorable nightmare inspired by these player-supplied fictional themes: ${JSON.stringify({ fear, darkness })}. Atmosphere: ${intensity}. Reveal the threat gradually through environmental changes, distant sounds and brief glimpses. Preserve spatial continuity and player agency. Find three missing case-file pages to unlock the exit. Each page reveals that the doctor designed this place. No explicit gore. Respect these excluded themes throughout: ${exclusions || "none specified"}.`,
-    beats: ["Explore the abandoned office and discover the first page.", "The corridor changes when you look away. Follow the sound to the second page.", "The feared presence approaches. Recover the last page and find the office door."],
-    reactor: { status: "awaiting_integration", note: "Pass prompt to your Reactor model session using its documented SDK." }
+    reactor: { status: "ready_to_connect", model: "reactor/fast-h3" }
   };
-  res.json(brief);
+  try {
+    brief.direction = await interpretBrief(brief, fal);
+    brief.opening = brief.direction.opening;
+    brief.objective = brief.direction.objective;
+    brief.prompt = `${brief.direction.opening} Setting: ${brief.direction.setting}. Objective: ${brief.objective}. Exclude: ${brief.exclusions}.`;
+    res.json(brief);
+  } catch {
+    res.status(502).json({error:"The interpretation service failed. Check the fal balance or disable ENABLE_DIRECTOR to pass the consultation directly to H3."});
+  }
 });
 
 function publicState() {
@@ -262,7 +281,7 @@ function publicState() {
 
 await loadCache();
 await loadLocalClips();
-app.listen(PORT, () => {
+app.listen(PORT, "127.0.0.1", () => {
   console.log(`psychologist's office open at http://localhost:${PORT}`);
   if (session.status === "ready") console.log("[cache] session ready — no generation needed");
 });

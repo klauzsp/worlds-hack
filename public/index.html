@@ -63,9 +63,20 @@
       <h2 class="title small">Something is waking up.</h2>
       <p class="subtitle">Your fear has been recorded.</p>
       <p id="fear-echo" class="fear-echo"></p>
-      <p class="subtitle">Your world brief is ready for Reactor.</p><div class="answer-row"><button id="download-btn" class="btn">Download brief</button><button id="copy-btn" class="btn">Copy prompt</button></div><details><summary>Read your nightmare</summary><p id="world-prompt"></p></details>
+      <p class="subtitle">The doctor has everything he needs. Close your eyes.</p><p id="reactor-error" role="alert"></p><button id="enter-world" class="btn">Enter the nightmare</button><div class="answer-row"><button id="download-btn" class="btn">Download brief</button><button id="copy-btn" class="btn">Copy prompt</button></div><details><summary>Read your nightmare</summary><p id="world-prompt"></p></details>
     </section>
 
-    <script type="module" src="app.js"></script>
+    <section id="world" class="screen hidden">
+      <p class="eyebrow">VEED → REACTOR / FAST H3</p>
+      <p id="world-status" role="status">Opening your nightmare…</p>
+      <video id="world-video" autoplay playsinline controls></video>
+      <p id="game-story" class="subtitle"></p>
+      <p class="controls">W forward · A look left · S back away · D look right · E investigate. Each action generates the next shot.</p>
+      <div id="world-actions" class="answer-row"></div>
+      <form id="action-form" class="answer"><label for="action-input">What do you do?</label><div class="answer-row"><input id="action-input" maxlength="300" placeholder="Describe your next action…" required><button class="btn" id="action-send">Act</button></div></form>
+      <details><summary>Consultation and current generation prompt</summary><p id="generation-prompt"></p></details>
+      <button id="stop-world" class="quiet">Wake up / end session</button>
+    </section>
+    <script type="module" src="bundle.js"></script>
   </body>
 </html>

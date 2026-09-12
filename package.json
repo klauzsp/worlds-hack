@@ -5,10 +5,16 @@
   "type": "module",
   "description": "Horror game: VEED psychologist intake -> Reactor world generation",
   "scripts": {
-    "start": "node --env-file=.env server.js"
+    "start": "npm run build && node --env-file=.env server.js",
+    "build": "node build.js"
   },
   "dependencies": {
     "@fal-ai/client": "^1.7.0",
+    "@reactor-team/js-sdk": "^3.0.2",
+    "esbuild": "^0.28.2",
     "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
   }
 }

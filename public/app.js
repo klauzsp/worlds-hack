@@ -1,11 +1,12 @@
+import { startWorld, stopWorld } from './world.js';
 const $ = id => document.getElementById(id);
-const screens = ['intro', 'loading', 'session', 'outro'];
+const screens = ['intro', 'loading', 'session', 'outro', 'world'];
 let state, brief, stopped = false;
 const answers = [];
 function show(name) { screens.forEach(id => $(id).classList.toggle('hidden', id !== name)); }
 async function api(url, body) {
   const res = await fetch(url, { method: body ? 'POST' : 'GET', headers: {'Content-Type':'application/json'}, body: body ? JSON.stringify(body) : undefined });
-  if (!res.ok) throw new Error('The session could not connect. Please try again.');
+  if (!res.ok) { const data = await res.json().catch(() => ({})); throw new Error(data.error || 'The session could not connect. Please try again.'); }
   return res.json();
 }
 function speak(turn) {
@@ -82,16 +83,19 @@ async function run() {
         };
       });
     }
+    show('loading');
+    $('loading-text').textContent = 'Turning your consultation into a nightmare…';
     brief = await api('/api/brief', { answers, intensity: $('intensity').value, exclusions: $('exclusions').value });
     $('fear-echo').textContent = `“${brief.fear}”`;
     $('world-prompt').textContent = brief.prompt;
     show('outro');
+    await enterWorld();
   } catch (err) {
     show('intro'); $('error').textContent = err.message;
   } finally { $('begin-btn').disabled = false; }
 }
 $('begin-btn').onclick = run;
-$('exit-btn').onclick = () => { stopped = true; window.speechSynthesis?.cancel(); location.reload(); };
+$('exit-btn').onclick = async () => { stopped = true; window.speechSynthesis?.cancel(); await stopWorld(); location.reload(); };
 $('download-btn').onclick = () => {
   const url = URL.createObjectURL(new Blob([JSON.stringify(brief, null, 2)], { type: 'application/json' }));
   const a = document.createElement('a'); a.href = url; a.download = 'reactor-horror-brief.json'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -100,3 +104,17 @@ $('copy-btn').onclick = async () => {
   try { await navigator.clipboard.writeText(brief.prompt); $('copy-btn').textContent = 'Copied'; }
   catch { $('copy-btn').textContent = 'Select the prompt below to copy'; }
 };
+
+async function enterWorld() {
+  $('enter-world').disabled = true;
+  $('reactor-error').textContent = '';
+  try {
+    await startWorld(brief, () => show('world'));
+  } catch (err) {
+    show('outro');
+    $('reactor-error').textContent = err.message;
+  } finally { $('enter-world').disabled = false; }
+}
+$('enter-world').onclick = enterWorld;
+$('stop-world').onclick = async () => { await stopWorld(); show('outro'); };
+window.addEventListener('pagehide', () => { void stopWorld(); });
