@@ -160,6 +160,68 @@ class HorrorScape {
     src.stop(t + 2.8);
   }
 
+  /* Psycho-style string stab — a tight cluster of dissonant high sines
+     hitting together, fast attack, short decay. */
+  private sting(): void {
+    const { ctx } = this;
+    const t = ctx.currentTime;
+    for (const freq of [1975, 2093, 2217, 2794]) {
+      const osc = ctx.createOscillator();
+      osc.type = "sawtooth";
+      osc.frequency.value = freq * (1 + (Math.random() - 0.5) * 0.01);
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.055, t);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+      const band = ctx.createBiquadFilter();
+      band.type = "bandpass";
+      band.frequency.value = freq;
+      band.Q.value = 2;
+      osc.connect(band).connect(gain).connect(this.out as GainNode);
+      osc.start(t);
+      osc.stop(t + 1);
+    }
+  }
+
+  /* Close-mic breath — rhythmic noise swells, slow and inhuman. */
+  private breathLoop(): void {
+    if (!this.alive || !this.escalated) return;
+    const { ctx } = this;
+    const t = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noise();
+    src.playbackRate.value = 0.55;
+    const band = ctx.createBiquadFilter();
+    band.type = "bandpass";
+    band.frequency.setValueAtTime(500, t);
+    band.frequency.linearRampToValueAtTime(750, t + 1.4);
+    band.frequency.linearRampToValueAtTime(420, t + 2.8);
+    band.Q.value = 2.5;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.045, t + 1.4);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 2.8);
+    src.connect(band).connect(gain).connect(this.out as GainNode);
+    src.start(t, Math.random());
+    src.stop(t + 3);
+    this.later(2600 + Math.random() * 1200, () => this.breathLoop());
+  }
+
+  /* Sub-bass drop — felt more than heard. */
+  private subDrop(): void {
+    const { ctx } = this;
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.frequency.setValueAtTime(60, t);
+    osc.frequency.exponentialRampToValueAtTime(34, t + 1.4);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.4, t + 0.5);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 1.6);
+    osc.connect(gain).connect(this.out as GainNode);
+    osc.start(t);
+    osc.stop(t + 1.7);
+  }
+
   /* Something big rising under everything — used once near the cut. */
   private riser(durSec: number): void {
     const { ctx } = this;
@@ -182,7 +244,8 @@ class HorrorScape {
 
   private scheduleStinger(): void {
     const pick = Math.random();
-    if (pick < 0.3) this.knock(Math.random() * 1.6 - 0.8);
+    if (this.escalated && pick < 0.18) this.subDrop();
+    else if (pick < 0.3) this.knock(Math.random() * 1.6 - 0.8);
     else if (pick < 0.55) this.metalGroan();
     else if (pick < 0.8) this.footsteps();
     else this.whisperSwell();
@@ -218,8 +281,10 @@ class HorrorScape {
   escalate(): void {
     if (!this.alive || this.escalated) return;
     this.escalated = true;
+    this.sting();
     this.footsteps();
     this.later(900, () => this.knock(0));
+    this.later(3000, () => this.breathLoop());
     this.heartPeriodMs = 1100;
     this.beat();
   }

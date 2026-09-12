@@ -28,7 +28,7 @@ export default function Page() {
   const [ackLine, setAckLine] = useState("");
   const [worldReady, setWorldReady] = useState(false);
   const [showHint, setShowHint] = useState(false);
-  const [escalated, setEscalated] = useState(false);
+  const [dread, setDread] = useState<"calm" | "escalated" | "climax">("calm");
 
   const jwtRef = useRef<string | null>(null);
   const answersRef = useRef<string[]>([]);
@@ -208,9 +208,12 @@ export default function Page() {
 
     later(30_000, () => {
       horror.escalate();
-      setEscalated(true);
+      setDread("escalated");
     });
-    later(PROMPT_RULES.travelSeconds * 1000 - 5000, () => horror.climax(5));
+    later(PROMPT_RULES.travelSeconds * 1000 - 5000, () => {
+      horror.climax(5);
+      setDread("climax");
+    });
     later(PROMPT_RULES.travelSeconds * 1000, () => {
       horror.stop(0.4);
       void adapter.end();
@@ -260,7 +263,7 @@ export default function Page() {
           ref={videoRef}
           visible={state.kind === "world"}
           showHint={showHint}
-          escalated={escalated}
+          dread={dread}
         />
       )}
 
