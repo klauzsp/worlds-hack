@@ -1,6 +1,7 @@
 import {
   HappyOysterModel,
   type AdventureCommand,
+  type TravelStateMessage,
   type WorldStateMessage,
 } from "@reactor-models/happy-oyster";
 
@@ -11,6 +12,7 @@ export type Interaction = NonNullable<AdventureCommand["interaction"]>;
 export type WorldAdapterEvents = {
   onPhase?: (phase: string) => void;
   onWorldState?: (state: WorldStateMessage) => void;
+  onTravelState?: (state: TravelStateMessage) => void;
   onStreamError?: (error: unknown) => void;
   onTravelEnd?: () => void;
 };
@@ -22,17 +24,33 @@ export type WorldAdapterEvents = {
  */
 export class WorldAdapter {
   private model: HappyOysterModel<"adventure">;
+  private travelState: TravelStateMessage | null = null;
 
   constructor(events: WorldAdapterEvents = {}) {
     this.model = new HappyOysterModel({ mode: "adventure" });
     if (events.onPhase) this.model.onPhaseChanged(events.onPhase);
     if (events.onWorldState) this.model.onWorldState(events.onWorldState);
     if (events.onStreamError) this.model.onTravelError(events.onStreamError);
+    this.model.onTravelState((state) => {
+      this.travelState = state;
+      events.onTravelState?.(state);
+    });
     if (events.onTravelEnd) {
       this.model.onTravelStatusChanged((status) => {
         if (status === "completed" || status === "failed") events.onTravelEnd?.();
       });
     }
+  }
+
+  /* Verbs the world itself advertises — environment_actions are things to
+     reach for (doors, switches); character_actions are things the player
+     body can do. Empty until the travel reports them. */
+  get environmentVerbs(): string[] {
+    return this.travelState?.environment_actions ?? [];
+  }
+
+  get characterVerbs(): string[] {
+    return this.travelState?.character_actions ?? [];
   }
 
   get phase(): string {

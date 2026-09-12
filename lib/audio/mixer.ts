@@ -27,6 +27,12 @@ class Mixer {
     return this.ctx !== null;
   }
 
+  /* Raw graph access for procedural layers (the horror soundscape builds
+     its own node tree on the master bus). */
+  get bus(): { ctx: AudioContext; master: GainNode } {
+    return this.requireCtx();
+  }
+
   private requireCtx(): { ctx: AudioContext; master: GainNode } {
     if (!this.ctx || !this.master) throw new Error("Mixer used before init()");
     return { ctx: this.ctx, master: this.master };

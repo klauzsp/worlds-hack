@@ -68,6 +68,12 @@ export function DoorSequence({
   }, [phase, worldReady, onWorldEnter]);
 
   function approach() {
+    // A click while her line is still playing skips it forward — never
+    // ignore input; the door only opens from the approach beat.
+    if (phase === "lines") {
+      setPhase("approach");
+      return;
+    }
     if (phase !== "approach") return;
     openedAt.current = Date.now();
     // Office ambience fades out; the sub-bass fades in and stays through black.

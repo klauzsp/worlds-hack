@@ -11,6 +11,7 @@ import { MovementControls } from "@/components/world/MovementControls";
 import { EndScene } from "@/components/return/EndScene";
 import { Notebook } from "@/components/return/Notebook";
 import { mixer } from "@/lib/audio/mixer";
+import { horror } from "@/lib/audio/horror";
 import { WorldAdapter } from "@/lib/world/adapter";
 import { PROMPT_RULES } from "@/lib/world/prompt-rules";
 import { ACKNOWLEDGEMENTS, LINES, QUESTIONS } from "@/content/questions";
@@ -27,6 +28,7 @@ export default function Page() {
   const [ackLine, setAckLine] = useState("");
   const [worldReady, setWorldReady] = useState(false);
   const [showHint, setShowHint] = useState(false);
+  const [escalated, setEscalated] = useState(false);
 
   const jwtRef = useRef<string | null>(null);
   const answersRef = useRef<string[]>([]);
@@ -39,6 +41,7 @@ export default function Page() {
   const fail = useCallback((message: string, error?: unknown) => {
     if (error) console.error(message, error);
     mixer.stopAll(0.3);
+    horror.stop(0.3);
     const detail =
       error instanceof Error ? error.message : error ? String(error) : null;
     setState({
@@ -133,9 +136,13 @@ export default function Page() {
     const adapter = new WorldAdapter({
       onStreamError: (error) => {
         console.error("World stream error:", error);
+        horror.stop(0.5);
         setState({ kind: "endscene" });
       },
-      onTravelEnd: () => setState({ kind: "endscene" }),
+      onTravelEnd: () => {
+        horror.stop(0.5);
+        setState({ kind: "endscene" });
+      },
     });
     adapterRef.current = adapter;
     const connectPromise = adapter.connect(jwtRef.current ?? "");
@@ -195,10 +202,17 @@ export default function Page() {
       return;
     }
     mixer.stopAll(1.5);
+    horror.start();
     setState({ kind: "world" });
     setShowHint(true);
 
+    later(30_000, () => {
+      horror.escalate();
+      setEscalated(true);
+    });
+    later(PROMPT_RULES.travelSeconds * 1000 - 5000, () => horror.climax(5));
     later(PROMPT_RULES.travelSeconds * 1000, () => {
+      horror.stop(0.4);
       void adapter.end();
       setState({ kind: "endscene" });
     });
@@ -242,7 +256,12 @@ export default function Page() {
       {/* The video element must exist before the stream opens, so the world
           screen stays mounted beneath the door sequence. */}
       {inDoorOrWorld && (
-        <WorldScreen ref={videoRef} visible={state.kind === "world"} showHint={showHint} />
+        <WorldScreen
+          ref={videoRef}
+          visible={state.kind === "world"}
+          showHint={showHint}
+          escalated={escalated}
+        />
       )}
 
       {state.kind === "door" && (
