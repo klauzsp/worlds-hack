@@ -1,0 +1,75 @@
+"use client";
+
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { mixer } from "@/lib/audio/mixer";
+import { PSYCHOLOGIST_BASE, type PsychologistLine } from "@/content/psychologist";
+
+export type PsychologistHandle = { play: (line: PsychologistLine) => Promise<void> };
+
+/** Keep the full frame visible and hold it between lines without changing framing. */
+export const Psychologist = forwardRef<PsychologistHandle>(function Psychologist(_, ref) {
+  const speechRef = useRef<HTMLVideoElement>(null);
+  const stillRef = useRef<HTMLCanvasElement>(null);
+  const pendingRef = useRef<(() => void) | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    play(line) {
+      const video = speechRef.current;
+      if (!video) return Promise.reject(new Error("The psychologist video is unavailable."));
+      pendingRef.current?.();
+      mixer.attachMedia(video);
+      video.style.opacity = "0";
+      return new Promise<void>((resolve, reject) => {
+        let settled = false;
+        const finish = (error?: Error) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          video.onplaying = null;
+          video.onended = null;
+          video.onerror = null;
+          const still = stillRef.current;
+          if (!error && still && video.videoWidth && video.videoHeight) {
+            still.width = video.videoWidth;
+            still.height = video.videoHeight;
+            still.getContext("2d")?.drawImage(video, 0, 0);
+          }
+          video.pause();
+          video.style.opacity = "0";
+          pendingRef.current = null;
+          if (error) reject(error); else resolve();
+        };
+        const timer = window.setTimeout(() => finish(new Error("The psychologist video stalled.")), 60_000);
+        pendingRef.current = () => finish(new Error("Psychologist playback cancelled."));
+        video.onplaying = () => { video.style.opacity = "1"; };
+        video.onended = () => finish();
+        video.onerror = () => finish(new Error(`The psychologist clip ${line} could not be played.`));
+        video.src = `${PSYCHOLOGIST_BASE}/${line}.mp4`;
+        void video.play().catch((error: unknown) => {
+          const reason = error instanceof Error ? `${error.name}: ${error.message}` : "Unknown playback error";
+          finish(new Error(`The psychologist clip ${line} could not start. ${reason}`));
+        });
+      });
+    },
+  }), []);
+
+  useEffect(() => () => {
+    // Strict Mode replays a newly mounted child's effects while its parent
+    // may already be playing a line. Cancel only after a real unmount.
+    queueMicrotask(() => {
+      if (!speechRef.current) pendingRef.current?.();
+    });
+  }, []);
+
+  return (
+    <div className="grade-office absolute inset-x-0 overflow-hidden bg-bg"
+      style={{ top: "max(0px, calc((100dvh - 100vw / 2.39) / 2))", bottom: "max(0px, calc((100dvh - 100vw / 2.39) / 2))" }}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- a held still frame, not a clip */}
+      <img src={`${PSYCHOLOGIST_BASE}/idle.png`} alt=""
+        className="absolute inset-0 h-full w-full object-contain object-center" aria-hidden="true" />
+      <canvas ref={stillRef} className="absolute inset-0 h-full w-full object-contain object-center" aria-hidden="true" />
+      <video ref={speechRef} playsInline preload="auto" style={{ opacity: 0 }}
+        className="absolute inset-0 h-full w-full object-contain object-center" aria-label="The psychologist speaking" />
+    </div>
+  );
+});

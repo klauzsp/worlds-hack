@@ -1,0 +1,44 @@
+[
+  {
+    "id": "q1",
+    "script": "Before we begin. When you were a child \u2014 what was the thing in the dark you were most certain was there?",
+    "voice": "oW8bn5YtBB89X2nJ0DT9",
+    "image": "/Users/samuelparke/Desktop/cs/worlds/content/veed/presenter-landscape.png"
+  },
+  {
+    "id": "q2",
+    "script": "You're walking home later than you meant to be, and you become certain someone is behind you. What do you do?",
+    "voice": "oW8bn5YtBB89X2nJ0DT9",
+    "image": "/Users/samuelparke/Desktop/cs/worlds/content/veed/presenter-landscape.png"
+  },
+  {
+    "id": "q3",
+    "script": "Imagine you can't leave a room until morning. Describe the room you'd least like it to be.",
+    "voice": "oW8bn5YtBB89X2nJ0DT9",
+    "image": "/Users/samuelparke/Desktop/cs/worlds/content/veed/presenter-landscape.png"
+  },
+  {
+    "id": "q4",
+    "script": "What's the last thing you'd want to see when you turn the light on?",
+    "voice": "oW8bn5YtBB89X2nJ0DT9",
+    "image": "/Users/samuelparke/Desktop/cs/worlds/content/veed/presenter-landscape.png"
+  },
+  {
+    "id": "understand",
+    "script": "I think I understand.",
+    "voice": "oW8bn5YtBB89X2nJ0DT9",
+    "image": "/Users/samuelparke/Desktop/cs/worlds/content/veed/presenter-landscape.png"
+  },
+  {
+    "id": "direction",
+    "script": "When you're ready \u2014 through the door.",
+    "voice": "oW8bn5YtBB89X2nJ0DT9",
+    "image": "/Users/samuelparke/Desktop/cs/worlds/content/veed/presenter-landscape.png"
+  },
+  {
+    "id": "closing",
+    "script": "Now we both know what's in there with you.",
+    "voice": "oW8bn5YtBB89X2nJ0DT9",
+    "image": "/Users/samuelparke/Desktop/cs/worlds/content/veed/presenter-landscape.png"
+  }
+]

@@ -1,56 +1,48 @@
-# The Consultation
+# Exposure
 
-A fictional evil psychologist interviews the player, then produces a personalized horror-world brief for Reactor.
+A psychologist interviews you for a minute. Then you walk through her door into a real-time, navigable horror world generated from your answers — and at the end she tells you what you were actually afraid of.
 
-## Run
+Built for WORLDS LONDON, a world-model hackathon, in about ten hours.
 
-Run `npm start` and open http://localhost:3000. Node 20.6+ is required. The existing .env is preserved. Without videos, the doctor uses browser speech with subtitles. Each answer box appears after its video finishes; submitting the answer starts the next video. Video controls allow replay. Answers are held in browser memory and submitted to build the brief, not written to disk.
+**Live: https://worlds-lemon-zeta.vercel.app**
 
-## Use your VEED credits
+## The idea
 
-Create a talking psychologist in VEED: an unsettlingly calm middle-aged doctor, direct eye contact, dim Victorian office, single amber desk lamp, subtle knowing smile. Use the same character and voice for all three clips. Export MP4 files into `public/clips/`:
+The world isn't a 3D scene — it's a video model. Reactor's `happy-oyster` model generates frames in real time from a text prompt and a seed image, streamed over WebRTC. There is no mesh, no collision, no entity system. The thing pursuing you exists because the prompt says it exists; turn around and back and the world has legitimately changed. Every design decision follows from that: you can't jump-scare a morphing video, so the horror is carried by the soundscape, the grade, and a slow escalation baked into the prompt itself.
 
-- `turn-0.mp4`: “Good evening. I've been expecting you. Please... sit. Before we begin, tell me your name.”
-- `turn-1.mp4`: “Mm. Breathe slowly. Now — when the lights go out and the house goes quiet... what do you see?”
-- `turn-2.mp4`: “One last question. Answer carefully — what you tell me next becomes the world you wake up in. What is your greatest fear?”
+The contrast is the product: an ordinary, expensive consulting room — identical at the start and the end — against whatever your answers built.
 
-Optionally add `portrait.png` (or jpg/webp). Restart the server after adding files. Clips are reused across players. This version is a scripted interview; it does not generate conversational follow-up questions.
+## The experience
 
-VEED editor credits and fal.ai API billing should not be assumed interchangeable. The optional existing fal generation pipeline requires `FAL_KEY` and explicit `ENABLE_GENERATION=1` in .env; it calls Flux, ElevenLabs and VEED Fabric via fal and may incur charges. Leave generation disabled to use exported VEED videos and browser speech. No paid generation is needed to demo.
+1. **Gate** — one click. It unlocks the audio context and mints the Reactor session token.
+2. **Interview** — a prerecorded VEED presenter (lip-synced, voice by Verity) asks four fixed questions about fear. You type answers.
+3. **Inference** — your answers become a structured `FearProfile` via OpenAI: a world prompt, a seed-image prompt, an escalation trajectory, and a closing line for the notebook.
+4. **The door** — her last lines, an Open door button, then one more clip ("Go on. I'll be watching.") covers the black while the seed image generates and the world builds behind it.
+5. **The world** — ~60 seconds of first-person travel. Hold-to-move (WASD), mouse look. At t=30s the world escalates; the sub-bass and pulse build to the cut.
+6. **Return** — back in the same office, unchanged. She says one line. The notebook shows the profile she inferred.
 
-## Reactor is the game renderer
+## Stack
 
-The flow is VEED video → answer, repeated three times → consultation-based prompt → **Reactor FastH3** (`reactor/fast-h3`) video and sound. The local canvas maze and its keyword-selected worlds have been removed. FastH3 accepts text directly, so neither a doctor portrait nor a synthetic maze image biases generation.
+- **Next.js 15** (App Router, TypeScript strict) on **Vercel** — one page, one state machine, no database
+- **Reactor `happy-oyster`** — the world model; the browser gets a short-lived JWT, nothing else
+- **OpenAI** — `FearProfile` inference (structured outputs) and the seed image
+- **Vercel Blob** — hosts the seed frame at a public URL the model fetches server-side
+- **VEED / OpenEdit** — all psychologist clips are pre-rendered and committed; nothing is generated during a session
+- **Web Audio** — every sound routes through one mixer (`lib/audio/mixer.ts`)
 
-The final greatest-fear answer is the primary subject in every scene; the second answer supplies compatible atmosphere only. Sharks produce an underwater diving-cage scenario, visibly circling animal sharks, and an escape route to a rescue boat. Snakes produce visible animal snakes in a greenhouse. Other fears are preserved literally with instructions to choose their actual physical habitat. A dark-bedroom answer cannot move a shark scenario out of the water. The expandable prompt panel shows exactly what H3 receives.
+## Run locally
 
-W/A/S/D/E select forward, left, back, right and investigate actions after each scene. A text field also accepts arbitrary actions. Each action generates a six-second H3 clip, with `continue_from_clip_id` preserving continuity where the model can. This is generated scene interaction, not continuous WASD locomotion or a deterministic physics engine. There is no claimed collision, inventory or automatic win detector. Wake up closes the session.
+```bash
+cp .env.example .env   # fill in the keys
+pnpm install
+pnpm dev               # localhost:3000
+```
 
-### Interpretation service
+Required: `REACTOR_API_KEY`, `OPENAI_API_KEY`, `BLOB_READ_WRITE_TOKEN`, `NEXT_PUBLIC_INTERVIEW_MODE=veed`. Details in `.env.example`.
 
-A server-side language-model director is implemented through fal's `openrouter/router` (Gemini 2.5 Flash). Set `ENABLE_DIRECTOR=1` in `.env` to enable it. It interprets the consultation into validated subject, setting, opening and objective fields. It requires funded fal access; the configured account returned HTTP 403, exhausted balance, during verification. VEED and Reactor credits do not fund this account.
+## Docs
 
-With the director disabled (default), the prompt is built directly from consultation text, explicitly identified as `source: consultation`. This does not claim AI interpretation. FastH3 itself performs generation from that text. If the enabled director fails, an error is shown; it does not silently substitute another game.
-
-`REACTOR_API_KEY` stays in ignored `.env`; the browser receives a temporary token scoped to one FastH3 session, capped at ten minutes. Reactor bills session time while open, including time between choices. The server binds to localhost.
-
-Run `npm start` (builds browser bundle), or `npm run build` after frontend edits. Run `node --test tests/director.test.js` for fear/prompt regression checks.
-
-References: [FastH3 API](https://www.reactor.inc/models/fast-h3/api), [fal LLM API](https://fal.ai/models/openrouter/router/api).
-
-## API
-
-- `POST /api/reactor/token` mints a scoped browser token.
-- `POST /api/session` prepares reusable media.
-- `GET /api/session` reports media readiness.
-- `POST /api/brief` accepts `{answers: [name, imagery, fear], intensity, exclusions}` and returns a world brief. Intensity is `slow dread`, `strong suspense` or `nightmare`.
-
-Player answers are not shared in session state. Generated media metadata is cached locally. Keep this development server local until authentication and spending controls are added for any enabled paid generation.
-
-The supplied “Beware of listening ears” videos are installed in order: unnumbered, -2, -3, as turn-0 through turn-2.
-
-## Live verification
-
-A real browser run submitted the three consultation answers, including `snake (the animal)`, and received 155 decoded FastH3 frames at 1344×768 with audio and video tracks. The captured image in `docs/h3-snake-check.png` shows animal snakes across a greenhouse floor. The test closed its Reactor session afterward. This verifies the opening scene; generation remains probabilistic. `tests/live-h3.mjs` is an explicit paid smoke check, not part of the normal test suite.
-
-After the Reactor balance was replenished, the shark browser test passed: the three consultation answers (including `sharks are my biggest fear` and secondary imagery `my dark bedroom`) produced an underwater diving cage with visibly circling sharks. The first scene delivered 154 decoded frames at 1344×768 with audio and video tracks. A subsequent typed action, `Swim backwards toward the guide rope while keeping the sharks in view`, completed another generated scene preserving the sharks, cage and guide rope. Screenshots: `docs/h3-shark-opening.png` and `docs/h3-shark-action.png`. The test closed the session afterward. This verifies those two generated scenes, not every possible fear or action.
+- `docs/PRD.md` — what it is, the nine features, acceptance criteria
+- `docs/ARCHITECTURE.md` — state machine, `FearProfile` shape, integration specs
+- `docs/DESIGN.md` — visual system: the 2.39:1 letterbox, grade, the no-spinner rule
+- `content/veed/README.md` — clip provenance and VEED spending
