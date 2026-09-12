@@ -7,9 +7,15 @@ All seven clips were generated with the approved OpenEdit set `exposure-psycholo
 
 The silent idle.webm is a four-second held portrait loop. Its source is the same VEED presenter thumbnail at https://cdn-site-assets.veed.io/20_66526d0e4f/20_66526d0e4f.jpg (the provider returns PNG bytes).
 
+## Landscape set (active)
+
+The same seven lines were re-rendered from `presenter-landscape.png` as the approved set `exposure-landscape` (shots-landscape.json) and installed in `public/video/psychologist-landscape/` — 1312×736 clips that fit inside the 2.39:1 letterbox without cropping. The component points here; the portrait set above is retained but unreferenced. `idle.png` is the held still used between lines.
+
 ## Spending
 
-OpenEdit estimated 129 AI Playground credits, with a range of 114–179. The observed workspace balance moved from 29,680 to 29,474: **206 credits**, above the estimate. Individual observed movements were 46, 48, 36, 26, 12, 20, and 18. VEED exposes no per-job charge, so these are workspace balance observations rather than a provider invoice. Measured generation rates were roughly 8–9 credits per video second, above the estimator's assumption.
+Portrait set: OpenEdit estimated 129 AI Playground credits, with a range of 114–179. The observed workspace balance moved from 29,680 to 29,474: **206 credits**, above the estimate. Individual observed movements were 46, 48, 36, 26, 12, 20, and 18. VEED exposes no per-job charge, so these are workspace balance observations rather than a provider invoice. Measured generation rates were roughly 8–9 credits per video second, above the estimator's assumption.
+
+Landscape set: estimated 112, observed 206 again (identical scripts and durations), taking the balance to ~29,268.
 
 ## Playback
 
