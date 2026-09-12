@@ -47,11 +47,14 @@ export class WorldAdapter {
     await this.model.connect(jwt);
   }
 
-  /* Resolves once the world reports ready. Image is the seed frame. */
-  async buildWorld(prompt: string, firstFrameImage: Blob): Promise<void> {
+  /* Resolves once the world reports ready. The URL is the seed frame; the
+     model fetches it server-side so it must be publicly reachable — the
+     Blob upload path resolves to a session-internal URL upstream cannot
+     fetch (action_error 400001). */
+  async buildWorld(prompt: string, firstFrameImageUrl: string): Promise<void> {
     await this.model.createWorld({
       prompt,
-      firstFrameImage,
+      firstFrameImageUrl,
       perspective: "first_person",
     });
   }
@@ -63,44 +66,36 @@ export class WorldAdapter {
     if (!result.streaming) throw new Error("World stream did not open");
   }
 
+  /* Control sends are fire-and-forget; a packet racing the end of a
+     travel rejects, which is expected — log it low rather than letting an
+     unhandled rejection surface. A broken live stream still reports via
+     onTravelError. */
+  private send(command: Promise<unknown>): void {
+    void command.catch((error) => console.debug("World control dropped:", error));
+  }
+
   move(direction: Translation): void {
-    void this.model.move(direction);
+    this.send(this.model.move(direction));
   }
 
   look(direction: Rotation): void {
-    void this.model.look(direction);
+    this.send(this.model.look(direction));
   }
 
   interact(verb: Interaction): void {
-    void this.model.interact(verb);
+    this.send(this.model.interact(verb));
   }
 
   hold(axes: AdventureCommand): void {
-    void this.model.hold(axes);
+    this.send(this.model.hold(axes));
   }
 
   release(axes: { translation?: true; rotation?: true; interaction?: true }): void {
-    void this.model.release(axes);
+    this.send(this.model.release(axes));
   }
 
   stopAll(): void {
-    void this.model.stop();
-  }
-
-  /*
-   * The single t=30s steering instruction. instruct() is documented for
-   * Directing worlds; on Adventure it is the only live text channel, so we
-   * fire it once and report whether the model took it. The world prompt
-   * already carries the escalation trajectory — see prompt-rules.ts.
-   */
-  async escalate(text: string): Promise<boolean> {
-    try {
-      const ack = await this.model.instruct(text);
-      return ack.accepted !== false;
-    } catch (error) {
-      console.error("Escalation instruction rejected:", error);
-      return false;
-    }
+    this.send(this.model.stop());
   }
 
   async end(): Promise<void> {

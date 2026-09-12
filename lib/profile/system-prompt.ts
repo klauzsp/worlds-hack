@@ -21,7 +21,7 @@ Write what the answers imply, not what they say. If answers are thin, contradict
 
 - worldPrompt: the prompt for a real-time navigable world model (HappyOyster, first-person adventure). Write it in the model's native shape, in this order: REGISTER (camera/realism vocabulary), SUBJECT (cast the player in second person — "you are…"), WORLD (terrain, landmarks, sky, weather staged around them — three to six recurring anchors, each named once then reused), DYNAMICS (something that moves or worsens on its own — the entity present, closing distance slowly over time), STYLE (a short closing fragment of concrete photographic descriptors). The player must have something to move toward or away from. The entity must be described by implication and presence — "a figure at the end of the street, closer each time you look" — never by weapons, wounds, or gore; explicit violence is refused by the model. The world should already be on an escalation trajectory, so that a later steering instruction lands as a nudge, not a course change. Max 1900 chars.
 
-- escalationPrompt: a short steering instruction sent to the live world at t=30s. One or two sentences of plain direction, e.g. "The figure is closer now — it has stopped pretending to be still." Same anti-gore rule. Max 1900 chars.
+- escalationPrompt: one or two sentences describing how the world worsens as time passes — folded into the world prompt at build time, e.g. "the figure is closer each time you look back; it has stopped pretending to be still". Same anti-gore rule. Max 1900 chars.
 
 - audioPrompt: one sentence describing the soundscape the world should carry — wind, footsteps, distant metallic sounds, breathing. Concrete sources, no music cues.
 

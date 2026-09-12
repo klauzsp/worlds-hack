@@ -39,7 +39,12 @@ export default function Page() {
   const fail = useCallback((message: string, error?: unknown) => {
     if (error) console.error(message, error);
     mixer.stopAll(0.3);
-    setState({ kind: "error", message });
+    const detail =
+      error instanceof Error ? error.message : error ? String(error) : null;
+    setState({
+      kind: "error",
+      message: detail ? `${message} — ${detail}` : message,
+    });
   }, []);
 
   const later = useCallback((ms: number, fn: () => void) => {
@@ -161,16 +166,13 @@ export default function Page() {
           body: JSON.stringify({ prompt: profile.seedImagePrompt }),
         });
         if (!imgRes.ok) throw new Error(`seed image ${imgRes.status}`);
-        const { imageBase64, mimeType } = (await imgRes.json()) as {
-          imageBase64: string;
-          mimeType: string;
-        };
-        const imageBytes = Uint8Array.from(atob(imageBase64), (c) => c.charCodeAt(0));
-        const imageBlob = new Blob([imageBytes], { type: mimeType });
+        const { imageUrl } = (await imgRes.json()) as { imageUrl: string };
 
         await connectPromise;
-        const worldPrompt = `${profile.worldPrompt}\n\n${profile.audioPrompt}`;
-        await adapter.buildWorld(worldPrompt, imageBlob);
+        // Adventure has no live text channel — the escalation is carried
+        // in the prompt itself (see prompt-rules.ts).
+        const worldPrompt = `${profile.worldPrompt}\n\n${profile.escalationPrompt}\n\n${profile.audioPrompt}`;
+        await adapter.buildWorld(worldPrompt, imageUrl);
         setWorldReady(true);
       } catch (error) {
         fail("The world could not be built.", error);
@@ -196,10 +198,6 @@ export default function Page() {
     setState({ kind: "world" });
     setShowHint(true);
 
-    const profile = profileRef.current;
-    later(PROMPT_RULES.escalationAtSec * 1000, () => {
-      if (profile) void adapter.escalate(profile.escalationPrompt);
-    });
     later(PROMPT_RULES.travelSeconds * 1000, () => {
       void adapter.end();
       setState({ kind: "endscene" });
