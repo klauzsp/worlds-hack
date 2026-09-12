@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Psychologist, type PsychologistHandle } from "@/components/office/Psychologist";
+import { VIDEO_INTERVIEW, type PsychologistLine } from "@/content/psychologist";
 import { Gate } from "@/components/Gate";
 import { OfficeScene } from "@/components/office/OfficeScene";
 import { Subtitle } from "@/components/interview/Subtitle";
@@ -30,13 +32,13 @@ export default function Page() {
   const [showHint, setShowHint] = useState(false);
   const [escalated, setEscalated] = useState(false);
 
+  const psychologistRef = useRef<PsychologistHandle>(null);
   const jwtRef = useRef<string | null>(null);
   const answersRef = useRef<string[]>([]);
   const profileRef = useRef<FearProfile | null>(null);
   const adapterRef = useRef<WorldAdapter | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const timersRef = useRef<number[]>([]);
-  const cancelledRef = useRef(false);
 
   const fail = useCallback((message: string, error?: unknown) => {
     if (error) console.error(message, error);
@@ -59,6 +61,18 @@ export default function Page() {
   /* Play a pre-baked voice line if the file exists; otherwise hold the
      subtitle for a reading-time beat. Resolves when the line has landed. */
   const speak = useCallback(async (url: string, text: string): Promise<void> => {
+    if (VIDEO_INTERVIEW) {
+      const name = url.split("/").pop()?.replace(".mp3", "");
+      if (name?.startsWith("ack")) {
+        await new Promise((resolve) => setTimeout(resolve, 700));
+        return;
+      }
+      if (!name || !/^(q[1-4]|closing)$/.test(name)) throw new Error("Unknown psychologist line.");
+      const psychologist = psychologistRef.current;
+      if (!psychologist) throw new Error("The psychologist is not ready.");
+      await psychologist.play(name as PsychologistLine);
+      return;
+    }
     try {
       const res = await fetch(url, { method: "HEAD" });
       if (res.ok) {
@@ -92,13 +106,18 @@ export default function Page() {
   /* ---- Interview -------------------------------------------------------- */
   useEffect(() => {
     if (state.kind !== "interview") return;
-    cancelledRef.current = false;
-    const cancelled = () => cancelledRef.current;
+    let isCancelled = false;
+    const cancelled = () => isCancelled;
     const i = questionIndex;
 
     setInterviewPhase("speaking");
     void (async () => {
-      await speak(`${VOICE_BASE}/q${i + 1}.mp3`, QUESTIONS[i]);
+      try {
+        await speak(`${VOICE_BASE}/q${i + 1}.mp3`, QUESTIONS[i]);
+      } catch (error) {
+        if (!cancelled()) fail("The psychologist could not speak.", error);
+        return;
+      }
       if (cancelled()) return;
       mixer.playOnce("/audio/pen-scratch.mp3", 0.5).catch(() => undefined);
       later(350, () => {
@@ -106,9 +125,9 @@ export default function Page() {
       });
     })();
     return () => {
-      cancelledRef.current = true;
+      isCancelled = true;
     };
-  }, [state.kind, questionIndex, speak, later]);
+  }, [state.kind, questionIndex, speak, later, fail]);
 
   const submitAnswer = useCallback(
     (answer: string) => {
@@ -227,9 +246,9 @@ export default function Page() {
     if (state.kind === "return") {
       mixer.playLoop("office-tone", "/audio/office-tone.mp3", 0.35, 2);
       mixer.playLoop("clock", "/audio/clock.mp3", 0.2, 2);
-      void speak(`${VOICE_BASE}/closing.mp3`, LINES.closing);
+      void speak(`${VOICE_BASE}/closing.mp3`, LINES.closing).catch((error) => fail("The closing line could not play.", error));
     }
-  }, [state.kind, speak]);
+  }, [state.kind, speak, fail]);
 
   const inOffice = state.kind === "interview" || state.kind === "inferring" || state.kind === "return";
   const inDoorOrWorld = state.kind === "door" || state.kind === "world";
@@ -241,7 +260,7 @@ export default function Page() {
         <p className="font-sans text-sm text-text-muted">Please use a larger screen.</p>
       </div>
 
-      {inOffice && <OfficeScene />}
+      {inOffice && <OfficeScene>{VIDEO_INTERVIEW && <Psychologist ref={psychologistRef} />}</OfficeScene>}
 
       {state.kind === "interview" && (
         <>

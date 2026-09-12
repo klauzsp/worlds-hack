@@ -14,6 +14,7 @@ class Mixer {
   private master: GainNode | null = null;
   private buffers = new Map<string, AudioBuffer>();
   private loops = new Map<string, LoopHandle>();
+  private media = new WeakMap<HTMLMediaElement, MediaElementAudioSourceNode>();
 
   init(): void {
     if (this.ctx) return;
@@ -70,6 +71,15 @@ class Mixer {
       source.onended = () => resolve();
       source.start();
     });
+  }
+
+  /** Route the embedded VEED voice through the same master bus as all other audio. */
+  attachMedia(element: HTMLMediaElement): void {
+    if (this.media.has(element)) return;
+    const { ctx, master } = this.requireCtx();
+    const source = ctx.createMediaElementSource(element);
+    source.connect(master);
+    this.media.set(element, source);
   }
 
   /* Duration in seconds after decode — lets the UI time subtitles to speech. */

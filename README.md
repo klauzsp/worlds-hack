@@ -28,4 +28,10 @@ pnpm generate:assets
 
 - Adventure mode has no `set_prompt` — the t=30s escalation uses `instruct()` (the only live text channel) and the world prompt itself carries the escalation trajectory. See `lib/world/prompt-rules.ts`.
 - There is no audio-prompt parameter on the world model; `audioPrompt` is folded into the world prompt.
-- VEED/avatar lobby: descoped. The office act is pure CSS grade.
+- The office interview supports the generated VEED presenter or the original audio mode.
+
+## VEED interview clips
+
+A prerecorded video interview can be selected with `NEXT_PUBLIC_INTERVIEW_MODE=veed` after the full clip set is installed. It plays the same four questions and opens each answer overlay when the corresponding video ends. Voice comes from the video through the existing audio mixer. The presenter listens silently during answers and acknowledgement subtitles. Door and return lines use the same presenter. World inference, Runware and Happy Oyster controls are unchanged.
+
+All seven generated clips and the silent listening loop are installed in `public/video/psychologist/`. Set `NEXT_PUBLIC_INTERVIEW_MODE=veed` in your local environment and restart the server to use them; `audio` selects the original interview. Generation scripts and spending notes are in `content/veed/`. No VEED generation runs during gameplay.

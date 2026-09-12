@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Psychologist, type PsychologistHandle } from "@/components/office/Psychologist";
+import { VIDEO_INTERVIEW } from "@/content/psychologist";
 import { Subtitle } from "@/components/interview/Subtitle";
 import { LINES } from "@/content/questions";
 import { mixer } from "@/lib/audio/mixer";
@@ -26,9 +28,30 @@ export function DoorSequence({
   const [line, setLine] = useState<string>(LINES.understand);
   const openedAt = useRef<number | null>(null);
   const timedOut = useRef(false);
+  const psychologistRef = useRef<PsychologistHandle>(null);
 
   // Her two lines — spoken if the pre-baked files exist — then approach.
   useEffect(() => {
+    if (VIDEO_INTERVIEW) {
+      let cancelled = false;
+      void (async () => {
+        try {
+          const psychologist = psychologistRef.current;
+          if (!psychologist) throw new Error("The psychologist is not ready.");
+          await psychologist.play("understand");
+          if (cancelled) return;
+          setLine(LINES.direction);
+          await psychologist.play("direction");
+          if (!cancelled) setPhase("approach");
+        } catch (error) {
+          if (!cancelled) {
+            console.error("Door dialogue failed", error);
+            onTimeout();
+          }
+        }
+      })();
+      return () => { cancelled = true; };
+    }
     const tryPlay = (name: string) =>
       fetch(`/audio/psychologist/${name}.mp3`, { method: "HEAD" })
         .then((r) => (r.ok ? mixer.playOnce(`/audio/psychologist/${name}.mp3`) : Promise.resolve()))
@@ -44,7 +67,7 @@ export function DoorSequence({
       window.clearTimeout(first);
       window.clearTimeout(second);
     };
-  }, []);
+  }, [onTimeout]);
 
   // Absolute cap: never hold on black forever.
   useEffect(() => {
@@ -70,6 +93,7 @@ export function DoorSequence({
   function approach() {
     // A click while her line is still playing skips it forward — never
     // ignore input; the door only opens from the approach beat.
+    if (phase === "lines" && VIDEO_INTERVIEW) return;
     if (phase === "lines") {
       setPhase("approach");
       return;
@@ -90,8 +114,11 @@ export function DoorSequence({
       role={phase === "approach" ? "button" : undefined}
       aria-label={phase === "approach" ? "Approach the door" : undefined}
     >
+      {VIDEO_INTERVIEW && (phase === "lines" || phase === "approach") && (
+        <Psychologist ref={psychologistRef} />
+      )}
       {/* The door: a vertical seam of darkness that parts on approach. */}
-      <div className="absolute inset-0 flex items-center justify-center">
+      <div className={`absolute inset-0 flex items-center justify-center ${VIDEO_INTERVIEW && phase === "lines" ? "invisible" : ""}`}>
         <div className="relative h-[62dvh] w-[24dvh] overflow-hidden">
           <div className="absolute inset-0 bg-walnut/20" />
           <div

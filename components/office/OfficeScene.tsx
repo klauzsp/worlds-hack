@@ -15,10 +15,10 @@ export function OfficeScene({ children }: { children?: React.ReactNode }) {
             "radial-gradient(ellipse 90% 70% at 50% 42%, rgba(217,199,167,0.14) 0%, rgba(58,42,30,0.35) 45%, rgba(10,9,8,0.97) 100%)",
         }}
       />
+      {children}
       <div className="treatment" />
       <div className="letterbox top" />
       <div className="letterbox bottom" />
-      {children}
     </div>
   );
 }
