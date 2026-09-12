@@ -3,7 +3,6 @@ import OpenAI from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { fearProfileSchema, openaiProfileSchema, profileRequestSchema } from "@/lib/profile/schema";
 import { SYSTEM_PROMPT, OPENAI_MODEL } from "@/lib/profile/system-prompt";
-import { createSession, getSession } from "@/lib/session";
 
 export async function POST(request: Request) {
   if (!process.env.OPENAI_API_KEY) {
@@ -16,8 +15,6 @@ export async function POST(request: Request) {
   }
 
   const openai = new OpenAI();
-  const session = createSession();
-  session.answers = [...parsed.data.answers];
 
   const completion = await openai.chat.completions.parse({
     model: OPENAI_MODEL,
@@ -46,9 +43,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Profile inference failed" }, { status: 502 });
   }
 
-  session.profile = validated.data;
-  if (!getSession(session.id)) {
-    return NextResponse.json({ error: "Session lost" }, { status: 500 });
-  }
-  return NextResponse.json({ sessionId: session.id, profile: validated.data });
+  return NextResponse.json({ profile: validated.data });
 }

@@ -12,7 +12,7 @@ export async function GET(
   if (!image) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  return new Response(image.bytes as unknown as BodyInit, {
+  return new Response(new Blob([new Uint8Array(image.bytes)], { type: image.mimeType }), {
     headers: { "Content-Type": image.mimeType, "Cache-Control": "no-store" },
   });
 }

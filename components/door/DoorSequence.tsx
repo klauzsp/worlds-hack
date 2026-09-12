@@ -15,10 +15,12 @@ type DoorPhase = "lines" | "approach" | "opening" | "black";
  */
 export function DoorSequence({
   worldReady,
+  speak,
   onWorldEnter,
   onTimeout,
 }: {
   worldReady: boolean;
+  speak: (url: string) => Promise<void>;
   onWorldEnter: () => void;
   onTimeout: () => void;
 }) {
@@ -27,24 +29,19 @@ export function DoorSequence({
   const openedAt = useRef<number | null>(null);
   const timedOut = useRef(false);
 
-  // Her two lines — spoken if the pre-baked files exist — then approach.
+  // Her two spoken lines, then the approach beat.
   useEffect(() => {
-    const tryPlay = (name: string) =>
-      fetch(`/audio/psychologist/${name}.mp3`, { method: "HEAD" })
-        .then((r) => (r.ok ? mixer.playOnce(`/audio/psychologist/${name}.mp3`) : Promise.resolve()))
-        .catch(() => undefined);
-
     const first = window.setTimeout(() => {
       setLine(LINES.direction);
-      void tryPlay("direction");
+      void speak("/audio/psychologist/direction.mp3");
     }, 2200);
     const second = window.setTimeout(() => setPhase("approach"), 4800);
-    void tryPlay("understand");
+    void speak("/audio/psychologist/understand.mp3");
     return () => {
       window.clearTimeout(first);
       window.clearTimeout(second);
     };
-  }, []);
+  }, [speak]);
 
   // Absolute cap: never hold on black forever.
   useEffect(() => {
@@ -95,13 +92,13 @@ export function DoorSequence({
         <div className="relative h-[62dvh] w-[24dvh] overflow-hidden">
           <div className="absolute inset-0 bg-walnut/20" />
           <div
-            className={`door-panel absolute inset-y-0 left-0 w-1/2 bg-[#120d09] ${
+            className={`door-panel door-panel-face absolute inset-y-0 left-0 w-1/2 ${
               phase !== "lines" && phase !== "approach" ? "-translate-x-full" : ""
             }`}
             style={{ transitionProperty: "transform" }}
           />
           <div
-            className={`door-panel absolute inset-y-0 right-0 w-1/2 bg-[#120d09] ${
+            className={`door-panel door-panel-face absolute inset-y-0 right-0 w-1/2 ${
               phase !== "lines" && phase !== "approach" ? "translate-x-full" : ""
             }`}
             style={{ transitionProperty: "transform" }}

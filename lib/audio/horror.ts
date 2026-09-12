@@ -20,6 +20,11 @@ class HorrorScape {
     return mixer.bus.ctx;
   }
 
+  private get bus(): GainNode {
+    if (!this.out) throw new Error("HorrorScape used before start()");
+    return this.out;
+  }
+
   private noise(): AudioBuffer {
     if (!this.noiseBuffer) {
       const { ctx } = this;
@@ -42,7 +47,7 @@ class HorrorScape {
     const droneGain = ctx.createGain();
     droneGain.gain.value = 0;
     droneGain.gain.linearRampToValueAtTime(0.16, ctx.currentTime + 4);
-    droneGain.connect(this.out as GainNode);
+    droneGain.connect(this.bus);
 
     for (const freq of [52, 53.7, 104.3]) {
       const osc = ctx.createOscillator();
@@ -73,7 +78,7 @@ class HorrorScape {
     lowpass.frequency.value = 420;
     const gain = ctx.createGain();
     gain.gain.value = 0.035;
-    src.connect(lowpass).connect(gain).connect(this.out as GainNode);
+    src.connect(lowpass).connect(gain).connect(this.bus);
     src.start();
   }
 
@@ -90,7 +95,7 @@ class HorrorScape {
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
     const panner = ctx.createStereoPanner();
     panner.pan.value = pan;
-    osc.connect(gain).connect(panner).connect(this.out as GainNode);
+    osc.connect(gain).connect(panner).connect(this.bus);
     osc.start(t);
     osc.stop(t + 0.6);
   }
@@ -111,7 +116,7 @@ class HorrorScape {
     gain.gain.setValueAtTime(0.0001, t);
     gain.gain.exponentialRampToValueAtTime(0.14, t + dur * 0.4);
     gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    osc.connect(band).connect(gain).connect(this.out as GainNode);
+    osc.connect(band).connect(gain).connect(this.bus);
     osc.start(t);
     osc.stop(t + dur + 0.1);
   }
@@ -135,7 +140,7 @@ class HorrorScape {
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(level, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
-    src.connect(lowpass).connect(gain).connect(this.out as GainNode);
+    src.connect(lowpass).connect(gain).connect(this.bus);
     src.start(t, Math.random());
     src.stop(t + 0.3);
   }
@@ -155,7 +160,7 @@ class HorrorScape {
     gain.gain.setValueAtTime(0.0001, t);
     gain.gain.exponentialRampToValueAtTime(0.06, t + 1.6);
     gain.gain.exponentialRampToValueAtTime(0.0001, t + 2.6);
-    src.connect(band).connect(gain).connect(this.out as GainNode);
+    src.connect(band).connect(gain).connect(this.bus);
     src.start(t, Math.random());
     src.stop(t + 2.8);
   }
@@ -176,7 +181,7 @@ class HorrorScape {
       band.type = "bandpass";
       band.frequency.value = freq;
       band.Q.value = 2;
-      osc.connect(band).connect(gain).connect(this.out as GainNode);
+      osc.connect(band).connect(gain).connect(this.bus);
       osc.start(t);
       osc.stop(t + 1);
     }
@@ -200,7 +205,7 @@ class HorrorScape {
     gain.gain.setValueAtTime(0.0001, t);
     gain.gain.exponentialRampToValueAtTime(0.045, t + 1.4);
     gain.gain.exponentialRampToValueAtTime(0.0001, t + 2.8);
-    src.connect(band).connect(gain).connect(this.out as GainNode);
+    src.connect(band).connect(gain).connect(this.bus);
     src.start(t, Math.random());
     src.stop(t + 3);
     this.later(2600 + Math.random() * 1200, () => this.breathLoop());
@@ -217,7 +222,7 @@ class HorrorScape {
     gain.gain.setValueAtTime(0.0001, t);
     gain.gain.exponentialRampToValueAtTime(0.4, t + 0.5);
     gain.gain.exponentialRampToValueAtTime(0.0001, t + 1.6);
-    osc.connect(gain).connect(this.out as GainNode);
+    osc.connect(gain).connect(this.bus);
     osc.start(t);
     osc.stop(t + 1.7);
   }
@@ -235,7 +240,7 @@ class HorrorScape {
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.0001, t);
     gain.gain.exponentialRampToValueAtTime(0.5, t + durSec);
-    src.connect(lowpass).connect(gain).connect(this.out as GainNode);
+    src.connect(lowpass).connect(gain).connect(this.bus);
     src.start(t, Math.random());
     src.stop(t + durSec + 0.1);
   }

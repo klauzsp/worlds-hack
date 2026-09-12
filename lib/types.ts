@@ -20,10 +20,3 @@ export type AppState =
   | { kind: "endscene" }
   | { kind: "return" }
   | { kind: "error"; message: string };
-
-export type Session = {
-  id: string;
-  answers: string[];
-  profile: FearProfile | null;
-  createdAt: number;
-};

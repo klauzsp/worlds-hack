@@ -64,7 +64,7 @@ export const WorldScreen = forwardRef<
   }, [visible, dread]);
 
   const videoClass = [
-    "grade-world world-crawl h-full w-full object-cover",
+    "grade-world h-full w-full object-cover",
     scare === "shake" ? (dread === "climax" ? "fx-shake-hard" : "fx-shake") : "",
   ]
     .filter(Boolean)
@@ -75,7 +75,13 @@ export const WorldScreen = forwardRef<
       className={`absolute inset-0 overflow-hidden bg-black transition-none ${visible ? "" : "invisible"}`}
       aria-hidden={!visible}
     >
-      <video ref={videoRef} autoPlay playsInline className={videoClass} />
+      {/* The crawl lives on a wrapper so the shake keyframes can own the
+          video's transform. The class is only applied on reveal, which is
+          when the animation starts; the video itself must never remount —
+          the stream is attached to it during the door phase. */}
+      <div className={`h-full w-full ${visible ? "world-crawl" : ""}`}>
+        <video ref={videoRef} autoPlay playsInline className={videoClass} />
+      </div>
       <div className={`treatment ${dread !== "calm" ? "fx-grain-heavy" : ""}`} />
       {dread !== "calm" && <div className="pulse-vignette" />}
       {scare === "glitch" && <div className="fx-glitch" />}

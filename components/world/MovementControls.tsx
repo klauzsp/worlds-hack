@@ -48,6 +48,7 @@ export function MovementControls({ adapter }: { adapter: WorldAdapter }) {
     let mouseX: Rotation = "None";
     let mouseY: Rotation = "None";
     let mouseDecay: number | null = null;
+    let lookBack: number | null = null;
 
     function keyRotation(): Rotation {
       const dirs = [...pressed].map((k) => LOOK_KEYS[k]).filter(Boolean);
@@ -97,10 +98,12 @@ export function MovementControls({ adapter }: { adapter: WorldAdapter }) {
       if (e.code === "KeyQ") {
         // Glance over the shoulder — a timed rotation hold ≈ a turn-back.
         // The pursuit only advances when unobserved; this is the check.
+        if (lookBack !== null) return;
         const dir = Math.random() < 0.5 ? "Mouse_Left" : "Mouse_Right";
         adapter.hold({ rotation: dir });
         lastRotation = dir;
-        window.setTimeout(() => {
+        lookBack = window.setTimeout(() => {
+          lookBack = null;
           adapter.release({ rotation: true });
           lastRotation = "None";
           mouseX = "None";
@@ -179,6 +182,7 @@ export function MovementControls({ adapter }: { adapter: WorldAdapter }) {
       window.removeEventListener("mousedown", onMouseDown);
       window.removeEventListener("blur", onBlur);
       if (mouseDecay !== null) window.clearTimeout(mouseDecay);
+      if (lookBack !== null) window.clearTimeout(lookBack);
       if (document.pointerLockElement !== null) document.exitPointerLock();
       onBlur();
     };

@@ -11,9 +11,6 @@ importers:
       '@reactor-models/happy-oyster':
         specifier: ^1.0.0
         version: 1.0.0(@tensorflow/tfjs-core@4.22.0)(react@19.2.8)(seedrandom@3.0.5)
-      '@runware/sdk':
-        specifier: ^1.6.10
-        version: 1.6.10
       next:
         specifier: 15.5.25
         version: 15.5.25(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -401,18 +398,6 @@ packages:
 
   '@rtsao/scc@1.1.0':
     resolution: {integrity: sha512-zt6OdqaDoOnJ1ZYsCYGt9YmWzDXl4vQdKTyJev62gFhRGKdx7mcT54V9KIjg+d2wi9EXsPvAPKe7i7WjfVWB8g==}
-
-  '@runware/sdk@1.6.10':
-    resolution: {integrity: sha512-d5ZaAf/FGLUEVMxZyECxQlFZHz2kpOwfYGJMtlH+EAW9HDwK7WCcHxBjWUVLm+7z3U5YVdceO6M818WKJBzD+g==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      ajv: ^8.0.0
-      ws: latest
-    peerDependenciesMeta:
-      ajv:
-        optional: true
-      ws:
-        optional: true
 
   '@rushstack/eslint-patch@1.16.1':
     resolution: {integrity: sha512-TvZbIpeKqGQQ7X0zSCvPH9riMSFQFSggnfBjFZ1mEoILW+UuXCKwOoPcgjMwiUtRqFZ8jWhPJc4um14vC6I4ag==}
@@ -2480,8 +2465,6 @@ snapshots:
       - supports-color
 
   '@rtsao/scc@1.1.0': {}
-
-  '@runware/sdk@1.6.10': {}
 
   '@rushstack/eslint-patch@1.16.1': {}
 

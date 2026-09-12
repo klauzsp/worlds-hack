@@ -93,6 +93,16 @@ body {
   filter: contrast(1.15) saturate(0.85) brightness(0.92);
 }
 
+/* The consulting room rendered in grade and shadow rather than an image. */
+.office-light {
+  background: radial-gradient(
+    ellipse 90% 70% at 50% 42%,
+    rgba(217, 199, 167, 0.14) 0%,
+    rgba(58, 42, 30, 0.35) 45%,
+    rgba(10, 9, 8, 0.97) 100%
+  );
+}
+
 /* Escalation vignette — the dark breathes in, roughly heartbeat rate. */
 @keyframes pulse-vignette {
   0%,
@@ -166,8 +176,8 @@ body {
   content: "";
   position: absolute;
   inset: 0;
-  /* Copy of the frame isn't possible — the slices carry displaced noise
-     plus color separation, which lands the same way on a dark frame. */
+  /* The frame itself can't be duplicated cheaply, so the slices carry
+     displaced scanline noise plus a red separation instead. */
   background:
     linear-gradient(rgba(255, 0, 60, 0.06), rgba(255, 0, 60, 0.06)),
     repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.09) 0 2px, transparent 2px 5px);
@@ -190,7 +200,7 @@ body {
   to { transform: scale(1.08); }
 }
 .world-crawl {
-  animation: world-crawl 30s linear forwards;
+  animation: world-crawl 60s linear forwards;
 }
 
 /* Office image drift — barely perceptible, stops the brain registering a still. */
@@ -234,6 +244,18 @@ body {
 }
 .subtitle-in {
   animation: subtitle-in 400ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+/* Subtitle legibility: a scrim rising from the bottom edge, and a soft
+   shadow on the line itself. */
+.subtitle-scrim {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 10rem;
+  background: linear-gradient(to top, rgba(10, 9, 8, 0.72), transparent);
+}
+.subtitle-text {
+  text-shadow: 0 1px 12px rgba(10, 9, 8, 0.9);
 }
 
 /* Answer overlay: scrim fade, input rises 12px. */
@@ -297,10 +319,18 @@ body {
   transition: transform 1500ms cubic-bezier(0.4, 0, 0.2, 1);
   transform-origin: center;
 }
+.door-panel-face {
+  background: #120d09;
+}
 
 /* Notebook typing caret. */
 .notebook-ink {
   color: var(--color-walnut);
+}
+/* The one paper texture in the app. */
+.notebook-paper {
+  background: linear-gradient(160deg, #efe6d4 0%, #e6dbc4 55%, #ddd0b6 100%);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
 }
 @keyframes caret-blink {
   0%,

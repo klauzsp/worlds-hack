@@ -38,17 +38,26 @@ export default function Page() {
   const timersRef = useRef<number[]>([]);
   const cancelledRef = useRef(false);
 
+  const clearTimers = useCallback(() => {
+    for (const id of timersRef.current) window.clearTimeout(id);
+    timersRef.current = [];
+  }, []);
+
   const fail = useCallback((message: string, error?: unknown) => {
     if (error) console.error(message, error);
+    clearTimers();
     mixer.stopAll(0.3);
     horror.stop(0.3);
+    const adapter = adapterRef.current;
+    adapterRef.current = null;
+    if (adapter) void adapter.end().catch(() => undefined);
     const detail =
       error instanceof Error ? error.message : error ? String(error) : null;
     setState({
       kind: "error",
       message: detail ? `${message} — ${detail}` : message,
     });
-  }, []);
+  }, [clearTimers]);
 
   const later = useCallback((ms: number, fn: () => void) => {
     const id = window.setTimeout(fn, ms);
@@ -56,20 +65,10 @@ export default function Page() {
     return id;
   }, []);
 
-  /* Play a pre-baked voice line if the file exists; otherwise hold the
-     subtitle for a reading-time beat. Resolves when the line has landed. */
-  const speak = useCallback(async (url: string, text: string): Promise<void> => {
-    try {
-      const res = await fetch(url, { method: "HEAD" });
-      if (res.ok) {
-        await mixer.playOnce(url);
-        return;
-      }
-    } catch (error) {
-      console.error(`Voice line unavailable: ${url}`, error);
-    }
-    const readingMs = Math.min(6000, Math.max(1800, text.split(" ").length * 320));
-    await new Promise((resolve) => setTimeout(resolve, readingMs));
+  /* Play a committed voice line; resolves when it ends. The files are part
+     of the app — a failure is a real error, not a beat to improvise. */
+  const speak = useCallback(async (url: string): Promise<void> => {
+    await mixer.playOnce(url);
   }, []);
 
   /* ---- Gate ------------------------------------------------------------ */
@@ -98,7 +97,12 @@ export default function Page() {
 
     setInterviewPhase("speaking");
     void (async () => {
-      await speak(`${VOICE_BASE}/q${i + 1}.mp3`, QUESTIONS[i]);
+      try {
+        await speak(`${VOICE_BASE}/q${i + 1}.mp3`);
+      } catch (error) {
+        fail("Her voice could not be played.", error);
+        return;
+      }
       if (cancelled()) return;
       mixer.playOnce("/audio/pen-scratch.mp3", 0.5).catch(() => undefined);
       later(350, () => {
@@ -108,7 +112,7 @@ export default function Page() {
     return () => {
       cancelledRef.current = true;
     };
-  }, [state.kind, questionIndex, speak, later]);
+  }, [state.kind, questionIndex, speak, later, fail]);
 
   const submitAnswer = useCallback(
     (answer: string) => {
@@ -117,7 +121,12 @@ export default function Page() {
       setAckLine(ack);
       setInterviewPhase("ack");
       void (async () => {
-        await speak(`${VOICE_BASE}/ack${(questionIndex % 3) + 1}.mp3`, ack);
+        try {
+          await speak(`${VOICE_BASE}/ack${(questionIndex % 3) + 1}.mp3`);
+        } catch (error) {
+          fail("Her voice could not be played.", error);
+          return;
+        }
         if (questionIndex + 1 < QUESTIONS.length) {
           setQuestionIndex(questionIndex + 1);
         } else {
@@ -125,7 +134,7 @@ export default function Page() {
         }
       })();
     },
-    [questionIndex, speak],
+    [questionIndex, speak, fail],
   );
 
   /* ---- Inference + world pipeline -------------------------------------- */
@@ -136,10 +145,12 @@ export default function Page() {
     const adapter = new WorldAdapter({
       onStreamError: (error) => {
         console.error("World stream error:", error);
+        clearTimers();
         horror.stop(0.5);
         setState({ kind: "endscene" });
       },
       onTravelEnd: () => {
+        clearTimers();
         horror.stop(0.5);
         setState({ kind: "endscene" });
       },
@@ -185,7 +196,7 @@ export default function Page() {
         fail("The world could not be built.", error);
       }
     })();
-  }, [state.kind, fail]);
+  }, [state.kind, fail, clearTimers]);
 
   /* ---- World entry ------------------------------------------------------ */
   const enterWorld = useCallback(async () => {
@@ -215,24 +226,38 @@ export default function Page() {
       setDread("climax");
     });
     later(PROMPT_RULES.travelSeconds * 1000, () => {
+      clearTimers();
       horror.stop(0.4);
       void adapter.end();
       setState({ kind: "endscene" });
     });
-  }, [fail, later]);
+  }, [fail, later, clearTimers]);
 
   const doorTimeout = useCallback(() => {
     fail("The door never opened.");
   }, [fail]);
+
+  const doorSpeak = useCallback(
+    async (url: string): Promise<void> => {
+      try {
+        await speak(url);
+      } catch (error) {
+        fail("Her voice could not be played.", error);
+      }
+    },
+    [speak, fail],
+  );
 
   /* ---- Return ------------------------------------------------------------ */
   useEffect(() => {
     if (state.kind === "return") {
       mixer.playLoop("office-tone", "/audio/office-tone.mp3", 0.35, 2);
       mixer.playLoop("clock", "/audio/clock.mp3", 0.2, 2);
-      void speak(`${VOICE_BASE}/closing.mp3`, LINES.closing);
+      speak(`${VOICE_BASE}/closing.mp3`).catch((error) =>
+        fail("Her voice could not be played.", error),
+      );
     }
-  }, [state.kind, speak]);
+  }, [state.kind, speak, fail]);
 
   const inOffice = state.kind === "interview" || state.kind === "inferring" || state.kind === "return";
   const inDoorOrWorld = state.kind === "door" || state.kind === "world";
@@ -270,6 +295,7 @@ export default function Page() {
       {state.kind === "door" && (
         <DoorSequence
           worldReady={worldReady}
+          speak={doorSpeak}
           onWorldEnter={enterWorld}
           onTimeout={doorTimeout}
         />
