@@ -1,48 +1,48 @@
 # Exposure
 
-A psychologist interviews you for forty seconds. Then you walk through a door into a real-time, navigable world generated from your answers — built for WORLDS LONDON (world-model hackathon, 12 Sep 2026).
+A psychologist interviews you for a minute. Then you walk through her door into a real-time, navigable horror world generated from your answers — and at the end she tells you what you were actually afraid of.
 
-Spec lives in `docs/` — read `PRD.md`, `ARCHITECTURE.md`, `DESIGN.md`. Working rules in `CLAUDE.md`.
+Built for WORLDS LONDON, a world-model hackathon, in about ten hours.
 
-## Run
+**Live: https://worlds-lemon-zeta.vercel.app**
+
+## The idea
+
+The world isn't a 3D scene — it's a video model. Reactor's `happy-oyster` model generates frames in real time from a text prompt and a seed image, streamed over WebRTC. There is no mesh, no collision, no entity system. The thing pursuing you exists because the prompt says it exists; turn around and back and the world has legitimately changed. Every design decision follows from that: you can't jump-scare a morphing video, so the horror is carried by the soundscape, the grade, and a slow escalation baked into the prompt itself.
+
+The contrast is the product: an ordinary, expensive consulting room — identical at the start and the end — against whatever your answers built.
+
+## The experience
+
+1. **Gate** — one click. It unlocks the audio context and mints the Reactor session token.
+2. **Interview** — a prerecorded VEED presenter (lip-synced, voice by Verity) asks four fixed questions about fear. You type answers.
+3. **Inference** — your answers become a structured `FearProfile` via OpenAI: a world prompt, a seed-image prompt, an escalation trajectory, and a closing line for the notebook.
+4. **The door** — her last lines, an Open door button, then one more clip ("Go on. I'll be watching.") covers the black while the seed image generates and the world builds behind it.
+5. **The world** — ~60 seconds of first-person travel. Hold-to-move (WASD), mouse look. At t=30s the world escalates; the sub-bass and pulse build to the cut.
+6. **Return** — back in the same office, unchanged. She says one line. The notebook shows the profile she inferred.
+
+## Stack
+
+- **Next.js 15** (App Router, TypeScript strict) on **Vercel** — one page, one state machine, no database
+- **Reactor `happy-oyster`** — the world model; the browser gets a short-lived JWT, nothing else
+- **OpenAI** — `FearProfile` inference (structured outputs) and the seed image
+- **Vercel Blob** — hosts the seed frame at a public URL the model fetches server-side
+- **VEED / OpenEdit** — all psychologist clips are pre-rendered and committed; nothing is generated during a session
+- **Web Audio** — every sound routes through one mixer (`lib/audio/mixer.ts`)
+
+## Run locally
 
 ```bash
-cp .env.example .env.local   # fill in REACTOR_API_KEY, OPENAI_API_KEY, RUNWARE_API_KEY
+cp .env.example .env   # fill in the keys
 pnpm install
-pnpm dev                     # localhost:3000
+pnpm dev               # localhost:3000
 ```
 
-## Flow
+Required: `REACTOR_API_KEY`, `OPENAI_API_KEY`, `BLOB_READ_WRITE_TOKEN`, `NEXT_PUBLIC_INTERVIEW_MODE=veed`. Details in `.env.example`.
 
-gate → 4 fixed typed questions → OpenAI structured `FearProfile` → Runware seed image → Reactor `happy-oyster-adventure` world (60s, first-person, WASD hold-to-move) → escalation instruction at t=30s → hard cut to end scene → notebook reveal.
+## Docs
 
-## Assets
-
-Committed audio placeholders are `say`-rendered. Regenerate with real TTS once `RUNWARE_API_KEY` is set:
-
-```bash
-pnpm generate:assets
-```
-
-## Notes
-
-- Adventure mode has no `set_prompt` — the t=30s escalation uses `instruct()` (the only live text channel) and the world prompt itself carries the escalation trajectory. See `lib/world/prompt-rules.ts`.
-- There is no audio-prompt parameter on the world model; `audioPrompt` is folded into the world prompt.
-- The office interview supports the generated VEED presenter or the original audio mode.
-
-## VEED interview clips
-
-A prerecorded video interview can be selected with `NEXT_PUBLIC_INTERVIEW_MODE=veed` after the full clip set is installed. It plays the same four questions and opens each answer overlay when the corresponding video ends. Voice comes from the video through the existing audio mixer. The presenter listens silently during answers and acknowledgement subtitles. Door and return lines use the same presenter. World inference, Runware and Happy Oyster controls are unchanged.
-
-All seven generated clips and the silent listening loop are installed in `public/video/psychologist/`. Set `NEXT_PUBLIC_INTERVIEW_MODE=veed` in your local environment and restart the server to use them; `audio` selects the original interview. Generation scripts and spending notes are in `content/veed/`. No VEED generation runs during gameplay.
-
-## Local seed-image access
-
-Reactor fetches the starting image from a public URL. For local development, keep the app on port 3000, then run these in separate terminals:
-
-```sh
-node scripts/serve-seed-images.mjs
-npx --yes untun@0.1.3 tunnel http://127.0.0.1:3001
-```
-
-Set `PUBLIC_BASE_URL` in `.env` to the HTTPS URL printed by the tunnel. The server on port 3001 exposes only existing seed-image JPEGs; it rejects the app UI, token exchange, and generation requests. Keep both processes running while playing. Quick-tunnel URLs change when restarted, so update `.env` each time. Restart the app when using a production build.
+- `docs/PRD.md` — what it is, the nine features, acceptance criteria
+- `docs/ARCHITECTURE.md` — state machine, `FearProfile` shape, integration specs
+- `docs/DESIGN.md` — visual system: the 2.39:1 letterbox, grade, the no-spinner rule
+- `content/veed/README.md` — clip provenance and VEED spending
