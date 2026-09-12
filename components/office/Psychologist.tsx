@@ -36,7 +36,10 @@ export const Psychologist = forwardRef<PsychologistHandle>(function Psychologist
         video.onended = () => finish();
         video.onerror = () => finish(new Error(`The psychologist clip ${line} could not be played.`));
         video.src = `${PSYCHOLOGIST_BASE}/${line}.mp4`;
-        void video.play().catch(() => finish(new Error("The psychologist video could not start.")));
+        void video.play().catch((error: unknown) => {
+          const reason = error instanceof Error ? `${error.name}: ${error.message}` : "Unknown playback error";
+          finish(new Error(`The psychologist clip ${line} could not start. ${reason}`));
+        });
       });
     },
   }), []);

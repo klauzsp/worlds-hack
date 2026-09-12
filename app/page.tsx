@@ -191,7 +191,12 @@ export default function Page() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ prompt: profile.seedImagePrompt }),
         });
-        if (!imgRes.ok) throw new Error(`seed image ${imgRes.status}`);
+        if (!imgRes.ok) {
+          const body: unknown = await imgRes.json().catch(() => null);
+          const detail = body && typeof body === "object" && "error" in body && typeof body.error === "string"
+            ? body.error : `Seed image request failed (${imgRes.status})`;
+          throw new Error(detail);
+        }
         const { imageUrl } = (await imgRes.json()) as { imageUrl: string };
 
         await connectPromise;
@@ -237,6 +242,18 @@ export default function Page() {
     });
   }, [fail, later]);
 
+  // Keep the same media element across interview and door: Safari grants
+  // audible playback permission per element, not per page.
+  const playDoorDialogue = useCallback((line: PsychologistLine) => {
+    const psychologist = psychologistRef.current;
+    if (!psychologist) return Promise.reject(new Error("The psychologist is not ready."));
+    return psychologist.play(line);
+  }, []);
+
+  const doorDialogueError = useCallback((error: unknown) => {
+    fail("The door dialogue could not play.", error);
+  }, [fail]);
+
   const doorTimeout = useCallback(() => {
     fail("The door never opened.");
   }, [fail]);
@@ -250,7 +267,7 @@ export default function Page() {
     }
   }, [state.kind, speak, fail]);
 
-  const inOffice = state.kind === "interview" || state.kind === "inferring" || state.kind === "return";
+  const inOffice = state.kind === "interview" || state.kind === "inferring" || state.kind === "door" || state.kind === "return";
   const inDoorOrWorld = state.kind === "door" || state.kind === "world";
 
   return (
@@ -288,6 +305,8 @@ export default function Page() {
           worldReady={worldReady}
           onWorldEnter={enterWorld}
           onTimeout={doorTimeout}
+          onDialogueError={doorDialogueError}
+          playDialogue={playDoorDialogue}
         />
       )}
 

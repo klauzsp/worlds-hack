@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Psychologist, type PsychologistHandle } from "@/components/office/Psychologist";
+import { type PsychologistHandle } from "@/components/office/Psychologist";
 import { VIDEO_INTERVIEW } from "@/content/psychologist";
 import { Subtitle } from "@/components/interview/Subtitle";
 import { LINES } from "@/content/questions";
@@ -19,16 +19,19 @@ export function DoorSequence({
   worldReady,
   onWorldEnter,
   onTimeout,
+  onDialogueError,
+  playDialogue,
 }: {
   worldReady: boolean;
   onWorldEnter: () => void;
   onTimeout: () => void;
+  onDialogueError: (error: unknown) => void;
+  playDialogue: PsychologistHandle["play"];
 }) {
   const [phase, setPhase] = useState<DoorPhase>("lines");
   const [line, setLine] = useState<string>(LINES.understand);
   const openedAt = useRef<number | null>(null);
   const timedOut = useRef(false);
-  const psychologistRef = useRef<PsychologistHandle>(null);
 
   // Her two lines — spoken if the pre-baked files exist — then approach.
   useEffect(() => {
@@ -36,17 +39,15 @@ export function DoorSequence({
       let cancelled = false;
       void (async () => {
         try {
-          const psychologist = psychologistRef.current;
-          if (!psychologist) throw new Error("The psychologist is not ready.");
-          await psychologist.play("understand");
+          await playDialogue("understand");
           if (cancelled) return;
           setLine(LINES.direction);
-          await psychologist.play("direction");
+          await playDialogue("direction");
           if (!cancelled) setPhase("approach");
         } catch (error) {
           if (!cancelled) {
             console.error("Door dialogue failed", error);
-            onTimeout();
+            onDialogueError(error);
           }
         }
       })();
@@ -67,7 +68,7 @@ export function DoorSequence({
       window.clearTimeout(first);
       window.clearTimeout(second);
     };
-  }, [onTimeout]);
+  }, [onTimeout, onDialogueError, playDialogue]);
 
   // Absolute cap: never hold on black forever.
   useEffect(() => {
@@ -109,14 +110,11 @@ export function DoorSequence({
 
   return (
     <div
-      className="absolute inset-0 z-20 bg-bg"
+      className={`absolute inset-0 z-20 ${VIDEO_INTERVIEW && (phase === "lines" || phase === "approach") ? "" : "bg-bg"}`}
       onClick={approach}
       role={phase === "approach" ? "button" : undefined}
       aria-label={phase === "approach" ? "Approach the door" : undefined}
     >
-      {VIDEO_INTERVIEW && (phase === "lines" || phase === "approach") && (
-        <Psychologist ref={psychologistRef} />
-      )}
       {/* The door: a vertical seam of darkness that parts on approach. */}
       <div className={`absolute inset-0 flex items-center justify-center ${VIDEO_INTERVIEW && phase === "lines" ? "invisible" : ""}`}>
         <div className="relative h-[62dvh] w-[24dvh] overflow-hidden">

@@ -1,0 +1,25 @@
+{
+  "portraitUrl": "https://v3.fal.media/files/koala/NLVPfOI4XL1cWT2PmmqT3_Hope.png",
+  "turns": [
+    {
+      "line": "Good evening. I've been expecting you. Please... sit. Before we begin, tell me your name.",
+      "label": "What is your name?",
+      "status": "done",
+      "videoUrl": "https://v3.fal.media/files/lion/Yha3swLpHm35hoJCs8oJQ_tmp618_yf2f.mp4"
+    },
+    {
+      "line": "Mm. Breathe slowly. Now — when the lights go out and the house goes quiet... what do you see?",
+      "label": "What do you see in the dark?",
+      "status": "done",
+      "videoUrl": "https://v3.fal.media/files/lion/Yha3swLpHm35hoJCs8oJQ_tmp618_yf2f.mp4"
+    },
+    {
+      "line": "One last question. Answer carefully — what you tell me next becomes the world you wake up in. What is your greatest fear?",
+      "label": "What is your greatest fear?",
+      "isFearQuestion": true,
+      "status": "done",
+      "videoUrl": "https://v3.fal.media/files/lion/Yha3swLpHm35hoJCs8oJQ_tmp618_yf2f.mp4"
+    }
+  ],
+  "fear": "spiders"
+}

@@ -35,3 +35,14 @@ pnpm generate:assets
 A prerecorded video interview can be selected with `NEXT_PUBLIC_INTERVIEW_MODE=veed` after the full clip set is installed. It plays the same four questions and opens each answer overlay when the corresponding video ends. Voice comes from the video through the existing audio mixer. The presenter listens silently during answers and acknowledgement subtitles. Door and return lines use the same presenter. World inference, Runware and Happy Oyster controls are unchanged.
 
 All seven generated clips and the silent listening loop are installed in `public/video/psychologist/`. Set `NEXT_PUBLIC_INTERVIEW_MODE=veed` in your local environment and restart the server to use them; `audio` selects the original interview. Generation scripts and spending notes are in `content/veed/`. No VEED generation runs during gameplay.
+
+## Local seed-image access
+
+Reactor fetches the starting image from a public URL. For local development, keep the app on port 3000, then run these in separate terminals:
+
+```sh
+node scripts/serve-seed-images.mjs
+npx --yes untun@0.1.3 tunnel http://127.0.0.1:3001
+```
+
+Set `PUBLIC_BASE_URL` in `.env` to the HTTPS URL printed by the tunnel. The server on port 3001 exposes only existing seed-image JPEGs; it rejects the app UI, token exchange, and generation requests. Keep both processes running while playing. Quick-tunnel URLs change when restarted, so update `.env` each time. Restart the app when using a production build.
