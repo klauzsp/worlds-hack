@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { type PsychologistHandle } from "@/components/office/Psychologist";
-import { VIDEO_INTERVIEW } from "@/content/psychologist";
+import { PSYCHOLOGIST_BASE, VIDEO_INTERVIEW } from "@/content/psychologist";
 import { Subtitle } from "@/components/interview/Subtitle";
 import { LINES } from "@/content/questions";
 import { mixer } from "@/lib/audio/mixer";
@@ -30,8 +30,10 @@ export function DoorSequence({
 }) {
   const [phase, setPhase] = useState<DoorPhase>("lines");
   const [line, setLine] = useState<string>(LINES.understand);
+  const [clipVisible, setClipVisible] = useState(false);
   const openedAt = useRef<number | null>(null);
   const timedOut = useRef(false);
+  const clipRef = useRef<HTMLVideoElement>(null);
 
   // Her two lines — spoken if the pre-baked files exist — then approach.
   useEffect(() => {
@@ -81,6 +83,24 @@ export function DoorSequence({
     return () => window.clearTimeout(cap);
   }, [onTimeout]);
 
+  /* The world-build cover: once the door opens she speaks one last line over
+     the black, then the clip's last frame holds — her watching — until the
+     world cuts in. */
+  useEffect(() => {
+    if (phase !== "opening" || !VIDEO_INTERVIEW) return;
+    const video = clipRef.current;
+    if (!video || video.src) return;
+    mixer.attachMedia(video);
+    video.oncanplay = () => setClipVisible(true);
+    video.onerror = () => onDialogueError(new Error("The threshold clip could not be played."));
+    video.src = `${PSYCHOLOGIST_BASE}/threshold.mp4`;
+    void video.play().catch((error) => onDialogueError(error));
+    return () => {
+      video.oncanplay = null;
+      video.onerror = null;
+    };
+  }, [phase, onDialogueError]);
+
   // When the world is ready, finish the fade to black then hand over.
   useEffect(() => {
     if (phase === "opening" && worldReady && openedAt.current !== null) {
@@ -125,6 +145,26 @@ export function DoorSequence({
           phase === "opening" || phase === "black" ? "opacity-100" : "opacity-0"
         }`}
       />
+
+      {/* Mounted from approach so the clip is buffered by the click; sits
+          above the black once it fades in. */}
+      {VIDEO_INTERVIEW && phase !== "lines" && (
+        <div
+          className="grade-office pointer-events-none absolute inset-x-0 overflow-hidden"
+          style={{ top: "max(0px, calc((100dvh - 100vw / 2.39) / 2))", bottom: "max(0px, calc((100dvh - 100vw / 2.39) / 2))" }}
+        >
+          <video
+            ref={clipRef}
+            playsInline
+            preload="auto"
+            className={`breathe fade-black absolute inset-0 h-full w-full object-contain object-center ${clipVisible ? "opacity-100" : "opacity-0"}`}
+            aria-label="The psychologist watching"
+          />
+          {/* The dark breathes around her — a held frame that reads as alive,
+              never a spinner. */}
+          <div className="pulse-vignette" />
+        </div>
+      )}
     </div>
   );
 }
