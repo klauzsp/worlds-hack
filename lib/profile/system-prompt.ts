@@ -25,6 +25,6 @@ Write what the answers imply, not what they say. If answers are thin, contradict
 
 - audioPrompt: one sentence describing the soundscape the world should carry — wind, footsteps, distant metallic sounds, breathing. Concrete sources, no music cues.
 
-- notebookLines: exactly three short lines in the psychologist's hand — what she wrote down. Clinical, quiet, second-person observations that connect the player's own words to the world they are about to enter. Each under 12 words. e.g. "Still checks behind her. Twice." These are the payoff of the whole product: make them specific to the answers, never generic.`;
+- notebookLine1, notebookLine2, notebookLine3: exactly three short lines in the psychologist's hand — what she wrote down. Clinical, quiet, second-person observations that connect the player's own words to the world they are about to enter. Each under 12 words. e.g. "Still checks behind her. Twice." These are the payoff of the whole product: make them specific to the answers, never generic.`;
 
 export const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-4.1-mini";

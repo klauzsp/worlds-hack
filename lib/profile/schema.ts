@@ -13,6 +13,19 @@ export const fearProfileSchema = z.object({
   notebookLines: z.tuple([z.string().min(1), z.string().min(1), z.string().min(1)]),
 });
 
+/*
+ * Strict Structured Outputs cannot represent tuples — the wire schema asks
+ * for three named lines; the route assembles them into notebookLines and
+ * validates against fearProfileSchema.
+ */
+export const openaiProfileSchema = fearProfileSchema
+  .omit({ notebookLines: true })
+  .extend({
+    notebookLine1: z.string().min(1),
+    notebookLine2: z.string().min(1),
+    notebookLine3: z.string().min(1),
+  });
+
 export const profileRequestSchema = z.object({
   answers: z.tuple([
     z.string().min(1).max(500),

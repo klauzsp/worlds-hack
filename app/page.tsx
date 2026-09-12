@@ -161,11 +161,16 @@ export default function Page() {
           body: JSON.stringify({ prompt: profile.seedImagePrompt }),
         });
         if (!imgRes.ok) throw new Error(`seed image ${imgRes.status}`);
-        const { imageUrl } = (await imgRes.json()) as { imageUrl: string };
+        const { imageBase64, mimeType } = (await imgRes.json()) as {
+          imageBase64: string;
+          mimeType: string;
+        };
+        const imageBytes = Uint8Array.from(atob(imageBase64), (c) => c.charCodeAt(0));
+        const imageBlob = new Blob([imageBytes], { type: mimeType });
 
         await connectPromise;
         const worldPrompt = `${profile.worldPrompt}\n\n${profile.audioPrompt}`;
-        await adapter.buildWorld(worldPrompt, imageUrl);
+        await adapter.buildWorld(worldPrompt, imageBlob);
         setWorldReady(true);
       } catch (error) {
         fail("The world could not be built.", error);

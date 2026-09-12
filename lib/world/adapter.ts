@@ -47,11 +47,11 @@ export class WorldAdapter {
     await this.model.connect(jwt);
   }
 
-  /* Resolves once the world reports ready. */
-  async buildWorld(prompt: string, firstFrameImageUrl: string): Promise<void> {
+  /* Resolves once the world reports ready. Image is the seed frame. */
+  async buildWorld(prompt: string, firstFrameImage: Blob): Promise<void> {
     await this.model.createWorld({
       prompt,
-      firstFrameImageUrl,
+      firstFrameImage,
       perspective: "first_person",
     });
   }

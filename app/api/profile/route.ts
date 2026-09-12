@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
-import { fearProfileSchema, profileRequestSchema } from "@/lib/profile/schema";
+import { fearProfileSchema, openaiProfileSchema, profileRequestSchema } from "@/lib/profile/schema";
 import { SYSTEM_PROMPT, OPENAI_MODEL } from "@/lib/profile/system-prompt";
 import { createSession, getSession } from "@/lib/session";
 
@@ -30,10 +30,16 @@ export async function POST(request: Request) {
           .join("\n"),
       },
     ],
-    response_format: zodResponseFormat(fearProfileSchema, "fear_profile"),
+    response_format: zodResponseFormat(openaiProfileSchema, "fear_profile"),
   });
 
-  const profile = completion.choices[0]?.message.parsed;
+  const raw = completion.choices[0]?.message.parsed;
+  const profile = raw
+    ? {
+        ...raw,
+        notebookLines: [raw.notebookLine1, raw.notebookLine2, raw.notebookLine3],
+      }
+    : null;
   const validated = fearProfileSchema.safeParse(profile);
   if (!validated.success) {
     console.error("FearProfile failed validation:", validated.error, profile);

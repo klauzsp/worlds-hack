@@ -1,14 +1,20 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@runware/sdk";
+import OpenAI from "openai";
 import { z } from "zod";
-import { PROMPT_RULES } from "@/lib/world/prompt-rules";
 
-const bodySchema = z.object({ prompt: z.string().min(1).max(2000) });
+const bodySchema = z.object({ prompt: z.string().min(1).max(4000) });
 
+/*
+ * Seed image via OpenAI — the Runware sponsor key has no credits, so the
+ * OpenAI key we already hold does this instead. gpt-image-1-mini at
+ * 1536x1024 is a 1.5 landscape frame, inside the world model's required
+ * 1.5–2.0 ratio. Returns base64; the client converts to a Blob and hands it
+ * to the SDK's firstFrameImage upload path (2 MB cap — JPEG keeps us well
+ * under it).
+ */
 export async function POST(request: Request) {
-  const apiKey = process.env.RUNWARE_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: "RUNWARE_API_KEY is not configured" }, { status: 500 });
+  if (!process.env.OPENAI_API_KEY) {
+    return NextResponse.json({ error: "OPENAI_API_KEY is not configured" }, { status: 500 });
   }
 
   const parsed = bodySchema.safeParse(await request.json());
@@ -16,19 +22,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const client = await createClient({ apiKey, transport: "rest" });
-  const results = await client.run({
-    model: "runware:101@1",
-    positivePrompt: parsed.data.prompt,
-    width: PROMPT_RULES.seedAspect.width,
-    height: PROMPT_RULES.seedAspect.height,
-    numberResults: 1,
+  const openai = new OpenAI();
+  const result = await openai.images.generate({
+    model: "gpt-image-1-mini",
+    prompt: `First-person point-of-view photograph, eye height: ${parsed.data.prompt}. No person in frame representing the viewer. Cinematic, dim, photographic.`,
+    size: "1536x1024",
+    quality: "medium",
+    output_format: "jpeg",
   });
 
-  const imageUrl = results[0] && "imageURL" in results[0] ? results[0].imageURL : undefined;
-  if (!imageUrl) {
-    console.error("Runware seed image returned no URL:", results);
+  const imageBase64 = result.data?.[0]?.b64_json;
+  if (!imageBase64) {
+    console.error("OpenAI seed image returned no data:", result);
     return NextResponse.json({ error: "Image generation failed" }, { status: 502 });
   }
-  return NextResponse.json({ imageUrl });
+  return NextResponse.json({ imageBase64, mimeType: "image/jpeg" });
 }
